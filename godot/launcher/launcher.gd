@@ -254,7 +254,7 @@ func _build_ui() -> void:
 
 	# Footer
 	var footer := Label.new()
-	footer.text = "DMCA-Clean Open Source Engine • No Nintendo assets included • Requires USA Rev 0 (GAFE01_00) ROM"
+	footer.text = "Open Source Hybrid Engine • BYO-ROM (No assets included) • Requires USA Rev 0 (GAFE01_00) ROM"
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	footer.add_theme_font_size_override("font_size", 10)
 	footer.add_theme_color_override("font_color", Color(0.42, 0.48, 0.56))

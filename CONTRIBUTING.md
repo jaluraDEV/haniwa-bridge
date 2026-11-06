@@ -4,7 +4,7 @@ Thank you for your interest in contributing! This document provides guidelines f
 
 ---
 
-## ⚖️ Zero-Asset & DMCA Policy (CRITICAL)
+## ⚖️ Zero-Asset Policy (CRITICAL)
 
 **Never commit or submit pull requests containing:**
 - Nintendo ROMs or disc images (`.iso`, `.ciso`, `.gcm`).
@@ -16,7 +16,7 @@ Thank you for your interest in contributing! This document provides guidelines f
 ### Automated Verification
 Before submitting any pull request or committing changes, run:
 ```powershell
-python tools/verify_dmca_clean.py
+python tools/verify_clean.py
 ```
 This script scans all git-tracked files and will fail if any proprietary asset, forbidden file extension, or binary signature is found. Every PR must pass with 0 violations.
 

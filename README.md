@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://github.com/jaluraDEV/haniwa-bridge"><img src="https://img.shields.io/badge/Platform-Windows%20x64-0078D6?logo=windows" alt="Platform: Windows x64" /></a>
   <a href="https://godotengine.org/"><img src="https://img.shields.io/badge/Renderer-Godot%204%20Forward%2B%20(Vulkan)-478CBF?logo=godotengine" alt="Renderer: Godot 4 Forward+" /></a>
-  <a href="#%EF%B8%8F-legal--dmca-compliance"><img src="https://img.shields.io/badge/DMCA%20Safe-Zero%20Nintendo%20Assets-2ea44f" alt="Zero Proprietary Assets (BYO-ROM)" /></a>
+  <a href="#%EF%B8%8F-legal-notice--byo-rom-policy"><img src="https://img.shields.io/badge/Assets-BYO--ROM%20(No%20Assets%20Included)-2ea44f" alt="BYO-ROM: No Proprietary Assets Included" /></a>
 </p>
 
 <p align="center">
@@ -26,12 +26,12 @@ All original gameplay logic, physics, collision, NPC schedules, and memory card 
 
 ---
 
-## ⚖️ Legal & DMCA Compliance
+## ⚖️ Legal Notice & BYO-ROM Policy
 
 > [!IMPORTANT]
-> **This repository contains ZERO Nintendo assets, ROM images, textures, models, audio files, or proprietary SDK code.**
+> **This repository contains zero Nintendo assets, ROM images, textures, models, audio files, or proprietary SDK code.**
 > - To build or run this project, you must provide your own legally dumped copy of **Animal Crossing (USA Rev 0 / `GAFE01_00`)** in `.iso`, `.gcm`, or `.ciso` format.
-> - On first launch, the **ACGC Hybrid Launcher** validates your ROM (`GameID: GAFE01`, `Revision: 0`) and performs a **one-time local extraction** into `orig/GAFE01_00/` (which is strictly gitignored).
+> - On first launch, the **HaniwaBridge Launcher** validates your ROM (`GameID: GAFE01`, `Revision: 0`) and performs a **one-time local extraction** into `orig/GAFE01_00/` (which is strictly gitignored).
 > - Never commit, upload, or distribute extracted assets, `.iso` files, or `.acfp` frame captures.
 
 ---
@@ -149,7 +149,7 @@ flowchart LR
      mingw-w64-x86_64-gcc
    ```
 2. **Godot Engine 4.3+ (Standard 64-bit Windows build)** (`Godot_v4.x-stable_win64.exe` placed in project root or `PATH`).
-3. **Python 3.10+** (for build and DMCA verification scripts).
+3. **Python 3.10+** (for build and verification scripts).
 
 ### Step 1: Build the 64-Bit GDExtension Client (`acgc_shm_client_x64.dll`)
 
@@ -205,7 +205,7 @@ bash -c "gcc -m32 -O2 -static-libgcc -static-libstdc++ -Wl,--large-address-aware
 ├── port/                    # Fork of ACGC-PC-Port (built on ACreTeam/ac-decomp)
 │   ├── include/acgc_shm.h   # ACGC_SHM_V1 32 MB shared memory specification
 │   └── pc/src/              # GX capture (pc_capture.c), disc/ROM extractor (pc_disc.c), audio
-├── tools/                   # Build scripts, DMCA audit (verify_dmca_clean.py), replay tools
+├── tools/                   # Build scripts, asset audit (verify_clean.py), replay tools
 └── docs/                    # Technical specifications, benchmarks, and architecture history
 ```
 

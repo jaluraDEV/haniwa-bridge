@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-verify_dmca_clean.py — Automated DMCA & Asset Audit for GitHub Release.
+verify_clean.py — Automated Zero-Asset Audit for GitHub Repository.
 Scans all git-tracked files (or workspace files if unzipped) for forbidden extensions,
 magic bytes (GC ISO/CISO/Yaz0/ACFP), and unexpected binary blobs.
 Exits with code 1 if any violation is detected.
@@ -90,7 +90,7 @@ def main() -> int:
 
     print(f"Scanned {len(files)} files.")
     if violations:
-        print(f"\nFAILED: Found {len(violations)} DMCA/Asset policy violation(s):")
+        print(f"\nFAILED: Found {len(violations)} asset policy violation(s):")
         for v in violations:
             print("  -", v)
         return 1
