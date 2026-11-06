@@ -231,3 +231,10 @@ This project was built rapidly as an open-source research foundation and welcome
 - **[ACreTeam / ac-decomp](https://github.com/ACreTeam/ac-decomp)**: For the monumental decompilation of *Animal Crossing* (GameCube).
 - **[flyngmt / ACGC-PC-Port](https://github.com/flyngmt/ACGC-PC-Port)**: For the x86 PC port foundation and runtime asset offset loader.
 - **[Godot Engine](https://godotengine.org/)**: For the 64-bit Forward+ Vulkan rendering engine.
+
+---
+
+## 📄 Trademark Notice & Disclaimer
+
+*Animal Crossing* and *Nintendo GameCube* are registered trademarks of Nintendo Co., Ltd.  
+HaniwaBridge is an independent, non-commercial open-source research project and is not affiliated with, endorsed by, or sponsored by Nintendo Co., Ltd. All product names, logos, and brands are property of their respective owners.
