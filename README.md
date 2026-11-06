@@ -5,10 +5,6 @@
 <h1 align="center">HaniwaBridge — ACGC Godot Hybrid Engine</h1>
 
 <p align="center">
-  <a href="https://github.com/jaluraDEV/haniwa-bridge/releases/latest"><img src="https://img.shields.io/badge/Download-Latest%20Release%20(Windows%20x64)-ff6b35?style=for-the-badge&logo=github" alt="Download Latest Release" /></a>
-</p>
-
-<p align="center">
   <a href="https://github.com/jaluraDEV/haniwa-bridge"><img src="https://img.shields.io/badge/Platform-Windows%20x64-0078D6?logo=windows" alt="Platform: Windows x64" /></a>
   <a href="https://godotengine.org/"><img src="https://img.shields.io/badge/Renderer-Godot%204%20Forward%2B%20(Vulkan)-478CBF?logo=godotengine" alt="Renderer: Godot 4 Forward+" /></a>
   <a href="#%EF%B8%8F-legal-notice--byo-rom-policy"><img src="https://img.shields.io/badge/Assets-BYO--ROM%20(No%20Assets%20Included)-2ea44f" alt="BYO-ROM: No Proprietary Assets Included" /></a>
@@ -89,14 +85,10 @@ flowchart LR
 
 ---
 
-## 🚀 Quick Start (Using the Prebuilt Release Launcher)
-
-> [!TIP]
-> **Want to play without compiling from source?**
-> Download **`HaniwaBridge-v0.1.0-Windows-x64.zip`** from the [**GitHub Releases page**](https://github.com/jaluraDEV/haniwa-bridge/releases/latest), extract the ZIP anywhere on your PC, and double-click **`ACGC_Launcher.exe`**.
+## 🚀 Running the Project
 
 1. **Launch the Application**:
-   - Run **`ACGC_Launcher.exe`** from the extracted release ZIP (or run `run_launcher.bat` in a developer setup).
+   - Run the launcher by running `run_launcher.bat` (or compile the standalone launcher via `tools/build_release_package.ps1`).
 2. **One-Time ROM Extraction**:
    - On your first run, the Launcher displays `⚠️ STATUS: NOT EXTRACTED — USA ROM (GAFE01_00) Required`.
    - Click **[ Select USA ROM (.iso/.ciso/.gcm) & Extract ]** and choose your *Animal Crossing (USA Rev 0, GAFE01_00)* disc image.
