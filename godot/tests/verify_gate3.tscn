@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://verifygate3001"]
+
+[ext_resource type="Script" path="res://tests/verify_gate3.gd" id="1_vgate3"]
+
+[node name="VerifyGate3" type="Node3D"]
+script = ExtResource("1_vgate3")

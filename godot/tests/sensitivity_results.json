@@ -1,0 +1,39 @@
+{
+	"actor_count": 8,
+	"baseline_hash": "0xa647fa0792b454b1",
+	"rng_seed": "0x9b4dae80",
+	"scene_mode": 3,
+	"scene_no": 19,
+	"tests": [
+		{
+			"changed": true,
+			"name": "Arena / MEM1 Heap (0x4000)",
+			"orig_byte": "0x00",
+			"poked_byte": "0x77",
+			"poked_hash": "0xfe5515676eb91db8",
+			"reverted_cleanly": true,
+			"reverted_hash": "0xa647fa0792b454b1"
+		},
+		{
+			"changed": true,
+			"name": "Actor Area (zelda_arena payload)",
+			"orig_byte": "0x01",
+			"poked_byte": "0xbf",
+			"poked_hash": "0xf8676a7e54fe2317",
+			"reverted_cleanly": true,
+			"reverted_hash": "0xa647fa0792b454b1"
+		},
+		{
+			"changed": true,
+			"name": "RNG State Seed (__qrand_idum)",
+			"poked_hash": "0x5734237f1c55a00f",
+			"reverted_cleanly": true,
+			"reverted_hash": "0xa647fa0792b454b1"
+		},
+		{
+			"ignored_as_expected": true,
+			"name": "Normalized Region (Top 64KB Stack Cutoff)",
+			"poked_hash": "0xa647fa0792b454b1"
+		}
+	]
+}

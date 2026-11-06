@@ -1,0 +1,92 @@
+# =============================================================================
+# STRICT DMCA / ZERO-ASSET GITIGNORE — NEVER COMMIT GAME ASSETS OR ROMS
+# =============================================================================
+
+# 1. Game Disc Images & Extracted Game Data
+rom/
+orig/
+game_data/
+assets/
+*.iso
+*.ciso
+*.gcm
+*.dol
+*.rel
+*.szs
+*.arc
+*.aw
+*.afc
+*.bin
+*.inc.bin
+
+# 2. Saves, Captures, Frame Dumps & Texture Packs
+save/
+save_backup/
+texture_pack/
+cache/
+captures/
+golden/
+screenshots/
+godot/debug_textures/
+godot/dump_run*/
+*.gci
+*.acfp
+*.bmp
+
+# 3. Screenshots & Local Diagnostic Media
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.mp4
+*.ico
+!docs/
+!docs/assets/
+!docs/assets/*.svg
+!docs/assets/haniwa_logo.png
+!godot/launcher/assets/
+!godot/launcher/assets/haniwa_logo.png
+
+# 4. Godot Engine Binaries, Imports & Export Builds
+Godot_v4.*
+.godot/
+*.import
+dist/
+release_artifacts/
+build/
+**/build/
+**/build32/
+**/bin/
+
+# 5. Compiled Binaries, Libraries & Object Files
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.o
+*.obj
+*.rsp
+*.tmp
+
+# 6. Local Runtime Configs, Logs & Scratch
+_internal_notes/
+reference/
+scratch/
+ACGC-PC-Port-master/
+*.log
+*.ini
+!godot/settings.ini.example
+!godot/keybindings.ini.example
+shadow_trace.txt
+water_debug.txt
+godot/shaders/acgc_water_2.gdshader
+
+# 7. IDE & OS
+.vscode/
+.idea/
+Thumbs.db
+__pycache__/
+*.pyc
+*.uid

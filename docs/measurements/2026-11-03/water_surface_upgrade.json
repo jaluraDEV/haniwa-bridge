@@ -1,0 +1,21 @@
+{
+  "test": "Frozen captured frame, 1.5s animation interval; not a performance benchmark",
+  "capture": "shm_frame_38143.acfp",
+  "water_draws": 5,
+  "water_roi": [
+    0,
+    400,
+    640,
+    80
+  ],
+  "roi_pixels_changed_gt2": 42952,
+  "roi_max_delta": 185,
+  "upper_350_changed_gt2": 0,
+  "live_zoom_and_performance": "NOT VERIFIED",
+  "original_regression": {
+    "comparisons": 39,
+    "failures": 0,
+    "mesh_evictions": 1811
+  },
+  "shader_compilation": "Vulkan Forward+ successful; existing shader-cache write warnings remain"
+}

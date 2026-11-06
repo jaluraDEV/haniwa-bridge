@@ -1,0 +1,13 @@
+{
+  "test": "frozen real SHM capture, 1.5 seconds shader-time separation; correctness only",
+  "water_roi": [
+    0,
+    400,
+    640,
+    80
+  ],
+  "changed_pixels_above_2_lsb": 38707,
+  "max_delta_lsb": 40,
+  "changed_pixels_above_2_lsb_top_350_rows": 0,
+  "performance_claim": false
+}

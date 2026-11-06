@@ -1,0 +1,17 @@
+[configuration]
+entry_symbol = "acgc_shm_client_init"
+compatibility_minimum = "4.1"
+
+[libraries]
+windows.editor.x86_64 = "res://bin/acgc_shm_client_x64.dll"
+windows.editor.64 = "res://bin/acgc_shm_client_x64.dll"
+windows.template_debug.x86_64 = "res://bin/acgc_shm_client_x64.dll"
+windows.template_debug.64 = "res://bin/acgc_shm_client_x64.dll"
+windows.template_release.x86_64 = "res://bin/acgc_shm_client_x64.dll"
+windows.template_release.64 = "res://bin/acgc_shm_client_x64.dll"
+windows.debug.x86_64 = "res://bin/acgc_shm_client_x64.dll"
+windows.debug.64 = "res://bin/acgc_shm_client_x64.dll"
+windows.release.x86_64 = "res://bin/acgc_shm_client_x64.dll"
+windows.release.64 = "res://bin/acgc_shm_client_x64.dll"
+windows.x86_64 = "res://bin/acgc_shm_client_x64.dll"
+windows.64 = "res://bin/acgc_shm_client_x64.dll"

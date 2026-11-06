@@ -1,0 +1,42 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="HaniwaBridge"
+run/main_scene="res://launcher/launcher.tscn"
+config/features=PackedStringArray("4.7", "Forward Plus")
+run/max_fps=60
+
+[debug]
+
+file_logging/enable_file_logging=true
+
+[display]
+
+window/size/viewport_width=880
+window/size/viewport_height=580
+window/size/window_width_override=880
+window/size/window_height_override=580
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/vsync/vsync_mode=0
+
+[rendering]
+
+; 16-bit directional shadow depth is ~0.04 capture units per step over the
+; 2500-unit shadow range. With the low evening sun the depth slope is steep
+; enough that this quantisation shows up as broad diagonal bands on the ground
+; (and they shift as the cascades refit while walking). 32-bit depth removes it
+; for one extra copy of the 4096 shadow atlas.
+lights_and_shadows/directional_shadow/16_bits=false
+; Shadow map resolution. The scene is large in capture units, so texels were coarse
+; enough that a few units of camera movement shifted/shuffled whole shadows.
+lights_and_shadows/directional_shadow/size=8192

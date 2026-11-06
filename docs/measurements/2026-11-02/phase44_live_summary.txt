@@ -1,0 +1,12 @@
+phase44_live.log
+[Settings] VSync mode set to 2: Adaptiv (Adaptive)
+[Lighting] Modus: Godot-Licht state={ "hour": 13, "minute": 0, "weather": 3, "season": 0 }
+PHASE44_METRICS { "fps": 60.077519379845, "interval_p50": 16.694, "interval_p99": 24.867, "static_memory_mb": 106.347329139709 }
+[Lighting] Modus: Original state={ "hour": 13, "minute": 0, "weather": 3, "season": 0 }
+PHASE44_MAIN: completed lit and original transition
+phase44_measured.log
+[Settings] VSync mode set to 2: Adaptiv (Adaptive)
+[Lighting] Modus: Godot-Licht state={ "hour": 13, "minute": 0, "weather": 3, "season": 0 }
+PHASE44_METRICS { "fps": 60.0, "interval_p50": 16.668, "interval_p99": 23.812, "static_memory_mb": 89.199047088623 }
+[Lighting] Modus: Original state={ "hour": 13, "minute": 0, "weather": 3, "season": 0 }
+PHASE44_MAIN: completed lit and original transition

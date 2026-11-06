@@ -1,0 +1,2 @@
+LEGACY: dropped=338240 underruns=0 discontinuous_samples=6694912 fill=63680
+FIXED: dropped=0 underruns=0 discontinuous_samples=0 fill=18880

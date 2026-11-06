@@ -1,0 +1,16 @@
+{
+  "capture": "same real SHM frame, frozen geometry and camera",
+  "source_water_vertices": [
+    72,
+    75,
+    39,
+    21,
+    48
+  ],
+  "subdivision": "three midpoint splits per triangle; 64 triangles per source triangle; lit water cache only",
+  "water_roi_max_pixel_delta_after_1_5_seconds": 101,
+  "water_roi_mean_max_channel_delta": 10.58357421875,
+  "changed_upper_350_rows_above_2_lsb": 0,
+  "live_visual_acceptance": "pending",
+  "performance_claim": false
+}

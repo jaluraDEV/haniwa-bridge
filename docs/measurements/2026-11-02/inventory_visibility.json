@@ -1,0 +1,42 @@
+{
+  "capture_sha256": "35fcceb490f13c58fcf48618955523e33e018cb90a61658d276a9b538e544ffe",
+  "draws": 191,
+  "comparison": "OpenGL replay of the same user main-loop capture; no performance claim",
+  "regions": {
+    "portrait_face": {
+      "rect": [
+        143,
+        115,
+        50,
+        55
+      ],
+      "before_mae_8bit": 78.58969696969697,
+      "after_mae_8bit": 2.104
+    },
+    "hand": {
+      "rect": [
+        161,
+        218,
+        47,
+        40
+      ],
+      "before_mae_8bit": 51.915070921985816,
+      "after_mae_8bit": 19.48191489361702
+    },
+    "selected_item_label": {
+      "rect": [
+        170,
+        280,
+        120,
+        20
+      ],
+      "before_mae_8bit": 7.164861111111111,
+      "after_mae_8bit": 7.164861111111111
+    }
+  },
+  "live_confirmation": {
+    "capture_sha256": "b5bd6e74c3f876a0bbc2d10dac52db287b3c94ad714aeb9452212e7359adee17",
+    "user_confirmed_hand_visible": true,
+    "review": "Portrait, animated hand and flame shirt label visible; second-item navigation not separately verified."
+  }
+}

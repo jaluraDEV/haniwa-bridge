@@ -1,0 +1,5 @@
+[Lighting] Modus: Godot-Licht state={ "hour": 13, "minute": 0, "weather": 3, "season": 0 }
+[Lighting] Modus: Original state={ "hour": 13, "minute": 0, "weather": 3, "season": 0 }
+[Lighting] Modus: Godot-Licht state={ "hour": 13, "minute": 0, "weather": 3, "season": 0 }
+[Lighting] Modus: Original state={ "hour": 13, "minute": 0, "weather": 3, "season": 0 }
+PHASE43_MAIN: PASS F4 original-lit-original-lit, RTC snapshot, original environment restored

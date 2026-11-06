@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://dump_breakdown_tscn"]
+
+[ext_resource type="Script" path="res://tests/dump_breakdown.gd" id="1_bd"]
+
+[node name="DumpBreakdown" type="Node"]
+script = ExtResource("1_bd")

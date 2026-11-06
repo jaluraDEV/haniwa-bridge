@@ -1,0 +1,23 @@
+{
+	"audio_dropped_samples": 0,
+	"audio_fill_max": 19008,
+	"audio_fill_min": 15872,
+	"audio_underruns": 0,
+	"displayed_frames": 1800,
+	"draws_max": 290,
+	"draws_min": 187,
+	"elapsed_seconds": 30.340926,
+	"frames_over_20ms": 0,
+	"interval_max_ms": 19.165,
+	"interval_p50_ms": 16.666,
+	"interval_p95_ms": 16.739,
+	"interval_p99_ms": 17.556,
+	"measured_frames": 1500,
+	"post_draw_p50_ms": 16.644,
+	"post_draw_p95_ms": 18.019,
+	"post_draw_p99_ms": 19.528,
+	"render_work_p50_ms": 9.017,
+	"render_work_p99_ms": 11.518,
+	"scene_override": -1,
+	"static_memory_mb": 60.8186016082764
+}

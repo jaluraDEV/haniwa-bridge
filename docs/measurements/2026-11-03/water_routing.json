@@ -1,0 +1,15 @@
+{
+  "capture_sha256": "9168a934ad71a370f759626f18a58eac9ba6db7d29a638165d15f084375da1d3",
+  "capture_origin": "F10 in real 64-bit SHM main loop",
+  "draw_calls": 269,
+  "water_draws_before": 0,
+  "water_draws_after": 5,
+  "water_stage0_hash": "a504accedef27169",
+  "signed_gdscript_value": -6555925153040928407,
+  "diagnostic_mask": "emissive magenta replacement verified on visible water surface, not bank/path",
+  "performance_claim": false,
+  "remaining_engine_messages": [
+    "root certificate store read failure during standalone 64-bit check",
+    "shader cache _save_to_cache f.is_null during snapshot tests; no shader compilation error observed"
+  ]
+}

@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://ci1u8n7a2y6q5"]
+
+[ext_resource type="Script" path="res://tests/render_single_frame.gd" id="1_r7m3k"]
+
+[node name="RenderSingleFrame" type="Node3D"]
+script = ExtResource("1_r7m3k")
