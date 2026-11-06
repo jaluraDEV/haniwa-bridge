@@ -1,28 +1,28 @@
-# EFB Reliability & Host Pacing Stress Test (10 Minuten)
+# EFB Reliability & Host Pacing Stress Test (10 Minutes)
 
-**Datum**: 2026-11-03T14:43:48
+**Date**: 2026-11-03T14:43:48
 
-**Dauer**: 600.01 s (10.00 min)
+**Duration**: 600.01 s (10.00 min)
 
-## 1. Frame- und Takt-Differenzierung
+## 1. Frame and Tick Differentiation
 
-| Metrik | Absoluter Wert | Frequenz | Beschreibung |
+| Metric | Absolute Value | Frequency | Description |
 |---|---:|---:|---|
-| **Host Simulationstakte** | 36001 | **60.00 Hz** | 32-Bit Host Tick-Count (frame_id Delta) |
-| **Godot Polling-Iterationen** | 35634 | **59.39 Hz** | Main-Thread `_process()` Aufrufe |
-| **Empfangene Pakete** | 35187 | 58.64 Hz | Erfolgreich aus SHM gepollt (`poll_frame() != empty`) |
-| **Künstlich verworfene Frames** | 11729 | **33.33 %** | Exakt jeder 3. empfangene Frame übersprungen |
-| **Gerenderte Frames** | 23458 | 39.10 Hz | Dem Forward+ Renderer übergebene Frames |
+| **Host Simulation Ticks** | 36001 | **60.00 Hz** | 32-Bit Host Tick Count (frame_id delta) |
+| **Godot Polling Iterations** | 35634 | **59.39 Hz** | Main thread `_process()` calls |
+| **Received Packets** | 35187 | 58.64 Hz | Successfully polled from SHM (`poll_frame() != empty`) |
+| **Artificially Dropped Frames** | 11729 | **33.33 %** | Exactly every 3rd received frame dropped |
+| **Rendered Frames** | 23458 | 39.10 Hz | Frames submitted to Forward+ renderer |
 
-## 2. EFB-Kopierzuverlässigkeit
+## 2. EFB Copy Reliability
 
-| Metrik | Wert |
+| Metric | Value |
 |---|---:|
-| Inventar-Zyklen (Auf / Zu) | 183 |
-| EFB-Kopien erfasst & quittiert | 183 |
-| Duplikat-Wiederholungen verarbeitet | 92 |
-| **Verlorene EFB-Kopien** | **0** |
+| Inventory Cycles (Open / Close) | 183 |
+| EFB Copies Captured & Acknowledged | 183 |
+| Duplicate Retransmissions Processed | 92 |
+| **Lost EFB Copies** | **0** |
 
-### Bewertung & Ergebnis
+### Evaluation & Result
 > [!IMPORTANT]
-> **PASS**: 0 verlorene EFB-Kopien über 10 Minuten unter 33.3 % künstlichem Frame-Drop. Alle Sequenznummern wurden lückenlos vom Host retransmittiert und von Godot quittiert.
+> **PASS**: 0 lost EFB copies over 10 minutes under 33.3% artificial frame dropping. All sequence numbers were retransmitted without gaps by the host and acknowledged by Godot.

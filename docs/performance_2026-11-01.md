@@ -1,113 +1,74 @@
-# Phase 3b: Audio- und Frame-Pacing-Korrektur, 2026-11-01
+# Phase 3b: Audio and Frame Pacing Correction (2026-11-01)
 
-## Nachgewiesene Ursachen
+## Identified Root Causes
 
-1. Der DAC erzeugt pro Syntheseschritt 560 Stereo-Frames bei 32 kHz,
-   also 17,5 ms. Ein obligatorischer Syntheseschritt pro 60-Hz-Spiel-Tick
-   produziert 33.600 statt 32.000 Stereo-Frames pro Sekunde. Zusätzliches
-   Catch-up beschleunigt das Füllen. `AIInitDMA` kürzte überlaufende Blöcke
-   stillschweigend. Der Underrun-Zähler konnte diesen Fehler nicht sehen.
-2. Der alte Benchmark maß ausschließlich Arbeit innerhalb von
-   `_physics_process`, ohne Engine-Rendering, Warten auf VSync oder tatsächliche
-   Bildabstände. `tick_ms + render_ms` im Overlay addierte außerdem bereits
-   parallel ausgeführte Arbeit. Der vermeintliche Dorf-Test hatte
-   `scene_override=-1`, keine Eingaben und lief dadurch im Titelablauf.
-3. Cache-Eviction durchsuchte für jedes alte Mesh/Material erneut sämtliche
-   Instanzen. Diese Suche ist unnötig: Alle aktiven Slots sind vorher an die
-   Ressourcen des aktuellen Frames gebunden, alle inaktiven Slots abgekoppelt.
-4. Bildaufbereitung innerhalb des Physikcallbacks wurde beim Nachholen von
-   Physikticks mehrfach ausgeführt. Nur das letzte dieser Bilder konnte
-   tatsächlich ausgegeben werden.
+1. The DAC generates 560 stereo frames at 32 kHz per synthesis step, corresponding to 17.5 ms. A mandatory synthesis step per 60 Hz game tick produces 33,600 rather than 32,000 stereo frames per second. Additional catch-up logic accelerated buffer filling. `AIInitDMA` silently truncated overflowing blocks, hiding this defect from the underrun counter.
+2. The legacy benchmark measured only work within `_physics_process`, excluding engine rendering, waiting on VSync, or actual frame intervals. Adding `tick_ms + render_ms` in the overlay additionally compounded work executing in parallel. The presumed village test had `scene_override=-1`, zero input, and therefore ran in the title sequence loop.
+3. Cache eviction repeatedly iterated through every instance for each stale mesh/material. This search is redundant: all active slots were already bound to current-frame resources, and all inactive slots decoupled.
+4. Frame preparation inside the physics callback executed multiple times during physics tick catch-up. Only the final rendered frame was actually presented.
 
-## Änderungen
+## Implemented Changes
 
-- `pc_audio_service_tick()` erzeugt bei aktivem Audiogerät nur bis zum
-  Pufferziel; ohne Gerät bleibt ein deterministischer Syntheseschritt pro Tick.
-  Synthese bleibt auf dem Spiel-Worker, ohne neuen konkurrierenden Audiozugriff
-  auf Spielzustand. Pufferziel weiterhin 17.920 interleaved Samples / 280 ms.
-- Verlorene Samples werden separat gezählt und durch die Bridge abgefragt.
-  Kein `printf` mehr im zeitkritischen SDL-Callback. Ring-Differenzen werden
-  vorzeichenlos berechnet; der Test überquert die signed-32-Bit-Grenze.
-- Der Standalone-Produzent erreicht nun ebenfalls die Vorfüllschwelle; vorher
-  lag sein Produktionsziel (4.480) unter der Startschwelle (17.920), was die
-  Wiedergabe beim Start dauerhaft pausiert halten konnte.
-- Spiel-Ticks bleiben bei 60 Hz. `_process` verarbeitet jeweils das neueste
-  fertige Paket einmal; beim Nachholen werden nur überholte Darstellungen
-  übersprungen, keine Spiel-Ticks.
-- Redundante Eviction-Suchen entfallen; unveränderte Mesh-/Materialbindungen
-  werden nicht erneut gesetzt. Statisch typisierte lokale Variablen vermeiden
-  dynamische Operationen beim Dekodieren der Pakete und Vertices.
-- Der Benchmark nutzt die echte Hauptszene. Gemessen werden getrennt
-  CPU-Bildaufbereitung, Abstände zwischen Bildaufbereitungen und
-  `RenderingServer.frame_post_draw`. Letzteres ist ein Engine-Signal,
-  **keine Messung des physischen Monitor-Scanouts**.
-- 60-FPS-Limit, VSync standardmäßig aus. Auf diesem Rechner ergab der sichtbare
-  A/B-Test mit VSync 70 statt 0 Bildabstände über 20 ms. Ohne VSync kann Tearing
-  auftreten. Die Einstellung bleibt in `godot/project.godot` änderbar.
-  Hintergrund: [Godot-Dokumentation zu Jitter und VSync](https://docs.godotengine.org/en/latest/tutorials/rendering/jitter_stutter.html).
+- `pc_audio_service_tick()` produces audio only up to the buffer target when an audio device is active; without an active device, a deterministic single synthesis step per tick is preserved. Synthesis remains isolated on the game worker thread without introducing concurrent access to game state. Target buffer depth remains 17,920 interleaved samples (280 ms).
+- Dropped samples are counted separately and queried by the bridge. Removed `printf` calls from the time-critical SDL callback. Ring buffer deltas are computed unsigned to cleanly cross the signed 32-bit boundary.
+- The standalone producer now reaches the prefill threshold; previously its target (4,480) sat below the trigger threshold (17,920), which could leave playback permanently stalled at startup.
+- Game ticks remain locked at 60 Hz. `_process` processes only the single latest complete packet; during catch-up, superseded intermediate frames are dropped without dropping game ticks.
+- Redundant eviction scans were eliminated; unchanged mesh/material bindings are preserved without re-assignment. Statically typed local variables prevent dynamic dispatch overhead during packet and vertex decoding.
+- The benchmark harness operates in the genuine main scene. Measurements separately track CPU frame preparation, time intervals between frames, and `RenderingServer.frame_post_draw`. The latter is an engine notification, **not a hardware monitor scanout measurement**.
+- 60 FPS cap with VSync disabled by default. On the test machine, visible A/B testing with VSync enabled produced 70 frame intervals > 20 ms (vs. 0 with VSync off). Without VSync, screen tearing may occur; the setting remains configurable in `godot/project.godot`.
+  Reference: [Godot Documentation on Jitter and VSync](https://docs.godotengine.org/en/latest/tutorials/rendering/jitter_stutter.html).
 
-## Belege
+## Verification & Metrics
 
-Host: Godot 4.7.2 x86_32, Forward+, RTX 4060 Laptop GPU, gemeldete Anzeige 60 Hz.
-Alle folgenden JSON-/Textdateien enthalten nur Messwerte, keine Spiel-Assets.
+Host: Godot 4.7.2 x86_32, Forward+, RTX 4060 Laptop GPU, reported 60 Hz display.
+All accompanying JSON and text files contain pure metrics with zero game assets.
 
 ### Audio
 
-`tools/test_audio_clock.sh` kompiliert einen assetfreien Test gegen das echte
-SDL-Backend. Ein synthetisches, fortlaufendes PCM-Signal wird über 120 simulierte
-Sekunden mit 60-Hz-Produktion und 32-kHz-Verbrauch auf Sample-Kontinuität geprüft.
-Der korrigierte Ablauf erhält zusätzlich regelmäßig 100-ms-Spielthread-Pausen.
+`tools/test_audio_clock.sh` compiles an asset-free test against the real SDL backend. A synthetic, continuous PCM waveform is verified for sample continuity over 120 simulated seconds at 60 Hz production and 32 kHz consumption. The corrected loop also handles periodic 100 ms game thread pauses.
 
-| Ablauf | Verworfene Samples | Underruns | Abweichende Ausgabesamples |
+| Pipeline | Dropped Samples | Underruns | Discrepant Output Samples |
 |---|---:|---:|---:|
-| Alter obligatorischer Syntheseschritt + Catch-up | 338.240 | 0 | 6.694.912 |
-| Verbrauchsgeregelte Produktion | 0 | 0 | 0 |
+| Legacy mandatory synthesis + catch-up | 338,240 | 0 | 6,694,912 |
+| Consumption-regulated production | 0 | 0 | 0 |
 
-Beleg: [audio_clock.txt](measurements/2026-11-01/audio_clock.txt).
-Die Anzahl abweichender Ausgabesamples zählt den verschobenen Signalverlauf nach
-einem Verlust, nicht nur die direkt verlorenen Samples.
+Evidence: [audio_clock.txt](measurements/2026-11-01/audio_clock.txt).
+Discrepant sample counts track phase drift across the entire waveform following a drop, not just the isolated missing samples.
 
-### Sichtbarer Titelablauf, 1.800 Bilder
+### Visible Title Sequence (1,800 Frames)
 
-Erste 300 Bilder als Boot-/Shader-Warm-up ausgeschlossen; Audioprobleme werden
-ab Start gezählt. 187–290 Drawcalls, 1.500 gemessene Bildabstände.
+The first 300 frames are excluded for boot/shader warm-up; audio metrics are recorded from start. 187–290 draw calls, 1,500 measured frame intervals.
 
-| Messung | 60-FPS-Limit, VSync aus | 60-FPS-Limit, VSync an |
+| Metric | 60 FPS Cap, VSync Off | 60 FPS Cap, VSync On |
 |---|---:|---:|
-| Bildabstand p50 | 16,666 ms | 16,660 ms |
-| Bildabstand p95 | 16,739 ms | 19,717 ms |
-| Bildabstand p99 | 17,556 ms | 22,102 ms |
-| Maximaler Bildabstand | 19,165 ms | 41,129 ms |
-| Bildabstände über 20 ms | 0 | 70 |
-| CPU-Bildaufbereitung p50 / p99 | 9,017 / 11,518 ms | 9,088 / 11,563 ms |
-| Post-draw-Abstand p99 | 19,528 ms | 22,164 ms |
-| Audioverluste / Underruns | 0 / 0 | 0 / 0 |
+| Frame Interval p50 | 16.666 ms | 16.660 ms |
+| Frame Interval p95 | 16.739 ms | 19.717 ms |
+| Frame Interval p99 | 17.556 ms | 22.102 ms |
+| Max Frame Interval | 19.165 ms | 41.129 ms |
+| Frame Intervals > 20 ms | 0 | 70 |
+| CPU Frame Prep p50 / p99 | 9.017 / 11.518 ms | 9.088 / 11.563 ms |
+| Post-Draw Interval p99 | 19.528 ms | 22.164 ms |
+| Audio Drops / Underruns | 0 / 0 | 0 / 0 |
 
-Belege: [Titel](measurements/2026-11-01/title_60fps.json),
-[VSync-Vergleich](measurements/2026-11-01/title_vsync_comparison.json).
-Der Puffer blieb zwischen 15.872 und 19.008 Samples (~248–297 ms).
-Die Startphase enthält weiterhin Shader-/Ressourcenaufbau mit längeren Frames.
+Evidence: [Title](measurements/2026-11-01/title_60fps.json),
+[VSync Comparison](measurements/2026-11-01/title_vsync_comparison.json).
+Buffer held steady between 15,872 and 19,008 samples (~248–297 ms).
+The initial boot phase includes shader compilation and resource initialization spikes.
 
-Ein ausgeblendetes Kontrollfenster war deutlich langsamer (3.600 Bilder in
-80,33 s; p99 34,96 ms). Das belegt einen Einfluss des Fensterzustands in dieser
-Messumgebung, isoliert aber nicht den konkreten Windows-/Treibermechanismus.
-Beleg: [Hintergrund-Kontrolle](measurements/2026-11-01/hidden_window_control.json).
+An obscured background control window performed significantly slower (3,600 frames in 80.33 s; p99 34.96 ms). This demonstrates window occlusion effects in this environment without isolating specific OS or driver mechanisms.
+Evidence: [Background Control](measurements/2026-11-01/hidden_window_control.json).
 
-### Renderer-Parität und Ressourcen-Lebensdauer
+### Renderer Parity & Resource Lifetime
 
-`test_renderer_regression.tscn` vergleicht den vorherigen und aktuellen Renderer
-in getrennten Viewports. 13 lokale Capture-Szenen werden dreimal durchlaufen.
-Neue Ressourcen-IDs bei unveränderten Geometriedaten erzwingen Cache-Eviction;
-unterschiedliche Drawcall-Mengen testen das Abkoppeln inaktiver Instanzen.
+`test_renderer_regression.tscn` compares the previous and updated renderer in separate viewports across 3 iterations of 13 local capture scenes. New resource IDs with identical geometry force cache eviction; varying draw call counts validate detachment of inactive instances.
 
-**39/39 Bilder byte-identisch, 1.811 Mesh-Evictions, keine Engine-Fehler.**
-Beleg: [renderer_regression.txt](measurements/2026-11-01/renderer_regression.txt).
-Dies belegt, dass diese Optimierung die bisherige Darstellung bewahrt, nicht
-dass alle älteren Forward+-Abweichungen zum Originalspiel verschwunden sind.
+**39/39 frames byte-identical, 1,811 mesh evictions, 0 engine errors.**
+Evidence: [renderer_regression.txt](measurements/2026-11-01/renderer_regression.txt).
+This demonstrates that optimizations preserve existing rendering output, but does not imply resolution of all earlier Forward+ deviations from original hardware.
 
-## Reproduktion
+## Reproduction Steps
 
-Aus dem Projektverzeichnis mit vorhandener privater ISO und lokalen Captures:
+From the project root with user-provided ISO and local captures:
 
 ```powershell
 & "$env:USERPROFILE/msys64/usr/bin/bash.exe" tools/build_bridge.sh
@@ -116,35 +77,19 @@ Aus dem Projektverzeichnis mit vorhandener privater ISO und lokalen Captures:
 .\Godot_v4.7.2-stable_win32_console.exe --path godot res://tests/test_village_5min.tscn -- --benchmark-output res://../scratch/village.json
 ```
 
-Für Performance-Messungen das Spielfenster sichtbar lassen. Der Dorftest nutzt
-explizit Szene 7; `--frames N` verkürzt ihn. Das Spiel wird nicht gespeichert.
-Der Benchmark beendet sich bei Audioverlusten/Underruns mit Fehlercode 1.
+Keep the game window visible for performance profiling. The village test explicitly loads scene 7; `--frames N` shortens duration. Game state is not written to disk. The benchmark exits with code 1 upon any audio loss or underrun.
 
-Für den Pixelvergleich eine vorherige Renderer-Version als GDScript exportieren,
-`class_name ACFPRenderer` darin zu `class_name ACFPBaselineRenderer` umbenennen und
-`test_renderer_regression.tscn -- --baseline <absoluter Scriptpfad>` starten.
+For pixel regression testing, export a previous renderer as GDScript, rename `class_name ACFPRenderer` to `class_name ACFPBaselineRenderer`, and execute `test_renderer_regression.tscn -- --baseline <absolute script path>`.
 
-## Verbleibende Grenzen
+## Remaining Constraints
 
-- Kein vollständiger 30-Minuten-Audionachweis oder Durchlauf aller interaktiven
-  Szenen/Spielstände. Keine Freigabe von Phase 4 oder Gate 6 daraus ableiten.
-- Die Audiolatenz bleibt bewusst bei etwa 280 ms; eine spätere Verringerung
-  benötigt eigene Tests mit kalten Shader-Caches und Szenenwechseln.
-- Die API `shutdown_game()` ist bei erzwungenem Dorfstart ohne Spielstand nicht
-  zuverlässig (Absturz im vorhandenen Scene-Destructor). Der normale App-Exit
-  stoppt/joint den Worker und gibt Rendering-Ressourcen frei, ohne diesen neuen
-  Destructor-Pfad aufzurufen; Prozessende räumt den Port wie bisher auf.
+- No continuous 30-minute audio validation or exhaustive interactive test covering all scenes/save states. Phase 4 or Gate 6 completion cannot be inferred from this test alone.
+- Audio latency is intentionally budgeted around 280 ms; lowering this requires dedicated testing with cold shader caches and scene transitions.
+- The `shutdown_game()` API is unstable when forcing village startup without a save file (crash inside existing scene destructor). Normal application exit stops/joins the worker and releases rendering resources without invoking this newly introduced destructor path; process termination cleans up the port as before.
 
+### Conclusion: 5-Minute Continuous Village Run
 
-### Abschluss: sichtbarer 5-Minuten-Lauf mit Dorfstart
-
-18.000 Bilder in **300,154 s** (~59,97 FPS einschließlich Start), 17.700
-Messbilder nach Warm-up. Bildabstände p50/p95/p99 **16,666/16,735/17,104 ms**;
-10 Abstände über 20 ms, Maximum 46,914 ms. Post-draw p99 18,054 ms.
-CPU-Bildaufbereitung p50/p99 2,080/3,347 ms; 0–78 Drawcalls, 58,07 MB Godot
-Static Memory. **0 Audioverluste, 0 Underruns**, Puffer 15.872–19.008 Samples.
-Keine Engine-Fehler im stderr. Der erzwungene Dorfstart ohne Save läuft periodisch
-über `toNextLand: l_keepSave not set` und `trademark_init` neu an; dieser Test
-belegt daher fünf Minuten inklusive dieser Übergänge, kein durchgehend bewohntes
-Dorf mit echtem Spielstand. Einzelne Übergänge verursachen weiter kurze Spitzen.
-Beleg: [village_start_5min.json](measurements/2026-11-01/village_start_5min.json).
+18,000 frames in **300.154 s** (~59.97 FPS including startup), 17,700 sampled frames post warm-up. Frame intervals p50/p95/p99 **16.666/16.735/17.104 ms**; 10 intervals > 20 ms, maximum 46.914 ms. Post-draw p99 18.054 ms.
+CPU frame prep p50/p99 2.080/3.347 ms; 0–78 draw calls, 58.07 MB Godot static memory. **0 audio drops, 0 underruns**, buffer 15,872–19,008 samples.
+Zero engine errors on stderr. Forced village startup without a save periodically resets via `toNextLand: l_keepSave not set` and `trademark_init`; this test proves 5 minutes of stability including these transitions rather than an uninterrupted gameplay session. Specific scene transitions continue to generate minor spikes.
+Evidence: [village_start_5min.json](measurements/2026-11-01/village_start_5min.json).

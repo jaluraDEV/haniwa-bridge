@@ -1,58 +1,58 @@
-# Vorbereitung Gate 6.2: SDFGI (Erweiterte Godot 4 Forward+ Global Illumination)
+# Preparation for Gate 6.2: SDFGI (Advanced Godot 4 Forward+ Global Illumination)
 
-**Status**: Schritt 0 (Machbarkeit) erfolgreich verifiziert; Gate 6.2 Umsetzung pausiert bis zur Nutzerabnahme  
-**Datum**: 2026-11-03  
-**Zielsystem**: NVIDIA GeForce RTX 4060 Laptop GPU (Vulkan 1.4.351, Godot 4.7.2 Forward+ Clustered RD)  
-**Beleg-Dokument**: `docs/gate_6_2_feasibility_report.md`
-
----
-
-## 1. Zielsetzung & Kontext
-
-Nach erfolgreicher Entkopplung in den 64-Bit-Client (Phase 5 / Gate 6.1) und der RTC-getriebenen Sonnen-/Mondbahn (Phase 4.1) besitzt der Godot-Renderer uneingeschränkten 64-Bit-Adressraum und moderne GPU-Hardwarebeschleunigung.
-
-Ziel von **Gate 6.2** ist die Einführung von **Global Illumination (GI)** für realistische indirekte Lichtrückwürfe (Color Bleeding vom Gras auf Fassaden, weiche Verschattung unter Dachvorsprüngen und Zäunen):
-- **SDFGI (Signed Distance Field Global Illumination)** für die Außenwelt (Dorf / Scene 7).
-- *Innenräume*: VoxelGI ist in Godot 4.7 zwar zur Laufzeit per `VoxelGI.bake()` technisch aufrufbar, wird jedoch aufgrund von Laufzeit-Bake-Stalls (mehrere hundert Millisekunden beim Raumwechsel), 16–64 MB VRAM-Overhead pro Raum und der für ACGC inkompatiblen SceneTree-Node-Traversierung zurückgestellt. Stattdessen wird für Innenräume ein lokales Nahbereichs-SDFGI (`min_cell_size = 0.1`) oder analytisches Indirect-Lighting evaluiert.
+**Status**: Step 0 (Feasibility) successfully verified; Gate 6.2 implementation paused pending user acceptance  
+**Date**: 2026-11-03  
+**Target System**: NVIDIA GeForce RTX 4060 Laptop GPU (Vulkan 1.4.351, Godot 4.7.2 Forward+ Clustered RD)  
+**Evidence Document**: `docs/gate_6_2_feasibility_report.md`
 
 ---
 
-## 2. Architekturentwurf: SDFGI in der Hybrid-Pipeline
+## 1. Objectives & Context
+
+Following the successful decoupling into the 64-bit client (Phase 5 / Gate 6.1) and the RTC-driven celestial orbit (Phase 4.1), the Godot renderer possesses an unrestricted 64-bit address space and modern GPU hardware acceleration.
+
+The goal of **Gate 6.2** is introducing **Global Illumination (GI)** for realistic indirect bounces (color bleeding from grass onto facades, soft shadowing under roof overhangs and fences):
+- **SDFGI (Signed Distance Field Global Illumination)** for the exterior world (village / Scene 7).
+- *Interiors*: While `VoxelGI.bake()` is technically invokable at runtime in Godot 4.7, it is deferred due to runtime bake stalls (several hundred milliseconds when transitioning rooms), 16–64 MB VRAM overhead per room, and the SceneTree node traversal requirement incompatible with ACGC's direct RenderingServer architecture. Instead, local short-range SDFGI (`min_cell_size = 0.1`) or analytical indirect lighting is being evaluated for interior spaces.
+
+---
+
+## 2. Architectural Design: SDFGI in the Hybrid Pipeline
 
 ```mermaid
 flowchart TD
     Host["32-Bit Host (acgc_host_x86)"] -->|"View Matrix V & ModelView MV"| Bridge["64-Bit GDExtension (acgc_shm_client)"]
     Bridge -->|"Render Loop"| ACFPRenderer["ACFPRenderer (godot)"]
     
-    subgraph WorldReconstruction["Koordinaten-Rekonstruktion"]
-        ACFPRenderer -->|"W = inverse(V) * MV"| WorldMesh["Instanz in Weltkoordinaten W"]
+    subgraph WorldReconstruction["Coordinate Reconstruction"]
+        ACFPRenderer -->|"W = inverse(V) * MV"| WorldMesh["World Space Mesh Instance W"]
         ACFPRenderer -->|"Camera3D.transform = inverse(V)"| GameCam["Perspective Camera3D (FOV 20°)"]
     end
     
-    subgraph GIClassification["GI-Klassifikation"]
-        WorldMesh -->|"Statisch (Gelände, Gebäude, Zäune: 52.4%)"| StaticGI["GI_MODE_STATIC (USE_BAKED_LIGHT=true)"]
-        WorldMesh -->|"Dynamisch (Spieler, NPCs, Effekte: 47.6%)"| DynamicGI["GI_MODE_DYNAMIC (USE_DYNAMIC_GI=true)"]
+    subgraph GIClassification["GI Classification"]
+        WorldMesh -->|"Static (Terrain, Buildings, Fences: 52.4%)"| StaticGI["GI_MODE_STATIC (USE_BAKED_LIGHT=true)"]
+        WorldMesh -->|"Dynamic (Player, NPCs, Effects: 47.6%)"| DynamicGI["GI_MODE_DYNAMIC (USE_DYNAMIC_GI=true)"]
     end
     
     subgraph GodotLighting["Lighting & SDFGI"]
-        DirLight["DirectionalLight3D (Sonne/Mond)"] -->|"Lichteinstrahlung"| SDFGI["Godot 4 SDFGI Cascades (4 Kaskaden)"]
+        DirLight["DirectionalLight3D (Sun/Moon)"] -->|"Direct Illumination"| SDFGI["Godot 4 SDFGI Cascades (4 Cascades)"]
         StaticGI -->|"Signed Distance Fields (Bounce Provider)"| SDFGI
-        DynamicGI -->|"Empfängt GI (Kein Bounce Provider)"| SDFGI
-        SDFGI -->|"Indirekter Grün-/Himmels-Bounce"| ForwardPlus["Forward+ Clustered RD Shaders"]
+        DynamicGI -->|"Receives GI (No Bounce Provider)"| SDFGI
+        SDFGI -->|"Indirect Green/Sky Bounce"| ForwardPlus["Forward+ Clustered RD Shaders"]
     end
 ```
 
-### A. Kamera- & Projektionsmodell
-- **Original-Modus (F4 / Unlit)**: Orthografische Dummy-Kamera (`size = 2000.0`), Vertex-Shader berechnet Projektion über `POSITION = u_projection * eyePos` (exakte TEV-Pixelparität).
-- **Lit-Modus (Enhanced Lighting)**: Perspektivische Godot `Camera3D` (`PROJECTION_PERSPECTIVE`, `FOV = 20.0°`, `near = 0.1`, `far = 2500.0`). Die Kamera folgt kontinuierlich der inversen View-Matrix $V^{-1}$ des Spiels. Alle Meshes liegen im echten Godot-Weltraum ($W = V^{-1} \cdot MV$).
+### A. Camera & Projection Model
+- **Original Mode (F4 / Unlit)**: Orthographic dummy camera (`size = 2000.0`), vertex shader evaluates projection via `POSITION = u_projection * eyePos` (exact TEV pixel parity).
+- **Lit Mode (Enhanced Lighting)**: Perspective Godot `Camera3D` (`PROJECTION_PERSPECTIVE`, `FOV = 20.0°`, `near = 0.1`, `far = 2500.0`). The camera continuously tracks the inverse view matrix $V^{-1}$ from the game. All meshes are positioned in authentic Godot world space ($W = V^{-1} \cdot MV$).
 
-### B. Geometrie-Klassifikation für SDFGI
-In Schritt 0 wurde experimentell bewiesen:
-- Objekte mit `GI_MODE_DYNAMIC` tragen **nicht** zum Bounce bei.
-- Nur Objekte mit `GI_MODE_STATIC` (`INSTANCE_FLAG_USE_BAKED_LIGHT = true`) speisen Photonen in SDF-Kaskaden ein.
-- Daher werden flaches Gelände und statische Strukturen (Häuser, Zäune, Bäume) als `GI_MODE_STATIC` registriert.
+### B. Geometry Classification for SDFGI
+Step 0 experimentally established:
+- Objects with `GI_MODE_DYNAMIC` do **not** contribute to indirect bounce.
+- Only objects with `GI_MODE_STATIC` (`INSTANCE_FLAG_USE_BAKED_LIGHT = true`) inject photons into SDF cascades.
+- Consequently, flat terrain and static structures (houses, fences, trees) are tagged as `GI_MODE_STATIC`.
 
-### C. Kaskaden-Konfiguration (Perspektivische Abstimmung)
+### C. Cascade Configuration (Perspective Tuning)
 - `sdfgi_cascades = 4`
 - `sdfgi_min_cell_size = 0.25`
 - `sdfgi_cascade0_distance = 64.0`
@@ -64,46 +64,46 @@ In Schritt 0 wurde experimentell bewiesen:
 
 ---
 
-## 3. Schutz von Regel 4 (Original-Modus Parität)
+## 3. Preserving Rule 4 (Original Mode Parity)
 
 > [!IMPORTANT]
-> **Kritische Invariante**: Der F4-Original-Modus darf durch SDFGI unter keinen Umständen visuell verändert werden!
-> - Beim Umschalten auf Modus 0 (Original TEV) wird `environment.sdfgi_enabled = false` zwingend gesetzt.
-> - Der Shader `acgc_unlit.gdshader` ignoriert alle GI-Bindings vollständig (`render_mode unshaded`).
-> - Paritätstoleranz aus `docs/scene_parity_13_scenes.md` bleibt garantiert erhalten.
+> **Critical Invariant**: F4 Original Mode must never suffer visual alteration from SDFGI under any circumstances!
+> - When switching to Mode 0 (Original TEV), `environment.sdfgi_enabled = false` is strictly enforced.
+> - The shader `acgc_unlit.gdshader` entirely disregards all GI bindings (`render_mode unshaded`).
+> - Parity tolerances defined in `docs/scene_parity_13_scenes.md` remain guaranteed.
 
 ---
 
-## 4. Reales Hardware- & Performance-Budget (Messwerte aus Schritt 0)
+## 4. Real Hardware & Performance Budget (Measurements from Step 0)
 
-| Ressource | Budget-Grenze | Gemessener Wert (Schritt 0) | Status |
+| Resource | Budget Cap | Measured Value (Step 0) | Status |
 |---|---:|---:|:---:|
-| **VRAM (SDFGI Kaskaden + History)** | < 800 MB | **498.0 MB** (Zuwachs +371 MB) | **PASS** (RTX 4060 hat 8.192 MB VRAM, 6.1% Belegung) |
-| **System-RAM (64-Bit Godot Client)** | < 1000 MB | **153.2 MB** | **PASS** (Kein 32-Bit Limit) |
-| **GPU Renderzeit p95 / max (SDFGI)** | < 5.0 ms | **1.58 ms** (Max: 1.64 ms) | **PASS** (> 90% GPU-Headroom) |
-| **GPU Renderzeit p95 / max (Lit ohne GI)** | < 3.0 ms | **0.89 ms** (Max: 1.16 ms) | **PASS** |
-| **GPU Renderzeit p95 / max (Original F4)** | < 2.0 ms | **0.50 ms** (Max: 0.76 ms) | **PASS** |
-| **CPU Renderzeit p95 (Kamerabewegung Dorf)** | < 5.0 ms | **2.73 ms** (Max: 3.43 ms) | **PASS** |
-| **GPU Renderzeit p95 (Kamerabewegung Dorf)** | < 5.0 ms | **2.34 ms** (Max: 4.52 ms) | **PASS** |
-| **Ortsfeste Geometrie-Stabilität** | < 0.05 Einheiten | **0.0002 Einheiten** | **PASS** (105 Hashes ortsfest über 300 Frames) |
+| **VRAM (SDFGI Cascades + History)** | < 800 MB | **498.0 MB** (Growth +371 MB) | **PASS** (RTX 4060 has 8,192 MB VRAM, 6.1% occupancy) |
+| **System RAM (64-Bit Godot Client)** | < 1000 MB | **153.2 MB** | **PASS** (No 32-bit limit) |
+| **GPU Render Time p95 / max (SDFGI)** | < 5.0 ms | **1.58 ms** (Max: 1.64 ms) | **PASS** (> 90% GPU headroom) |
+| **GPU Render Time p95 / max (Lit without GI)** | < 3.0 ms | **0.89 ms** (Max: 1.16 ms) | **PASS** |
+| **GPU Render Time p95 / max (Original F4)** | < 2.0 ms | **0.50 ms** (Max: 0.76 ms) | **PASS** |
+| **CPU Render Time p95 (Village Camera Motion)** | < 5.0 ms | **2.73 ms** (Max: 3.43 ms) | **PASS** |
+| **GPU Render Time p95 (Village Camera Motion)** | < 5.0 ms | **2.34 ms** (Max: 4.52 ms) | **PASS** |
+| **Stationary Geometry Stability** | < 0.05 units | **0.0002 units** | **PASS** (105 hashes motionless over 300 frames) |
 
 ---
 
-## 5. Konkrete Kriterien für Gate 6.2 (Abnahmekatalog)
+## 5. Formal Criteria for Gate 6.2 (Acceptance Checklist)
 
-Ein Bestehen von Gate 6.2 setzt die lückenlose Erfüllung folgender Punkte voraus:
-1. **Sichtbarer indirekter Bounce**: Boden und Vegetation reflektieren warmes/farbiges Fülllicht an vertikale weiße Wände (in Schritt 0 an isolierter Fassade mit $\Delta R = +62.8$ LSB spektraler Rot-/Warmverschiebung und an Zäunen mit bis zu $\Delta G = +209$ LSB nachgewiesen).
-2. **Dynamische Tag/Nacht-Reaktion**: Bei Nacht wechselt der indirekte Lichtanteil zu kühlem Mondlicht, bei Sonnenuntergang zu warmem Orange.
-3. **Strikte F4-Trennung**: Umschalten per F4 deaktiviert SDFGI rückstandsfrei (0 ms GI-Overhead, keine Helligkeitsverfälschung).
-4. **Performance-Verifikation**: 3-minütiger Dorf-Rundgang im echten Main-Loop weist ein **p99 < 16.7 ms** (stabile 60 FPS) auf.
-5. **Zero Asset Violation**: Keinerlei gebackene Texturkarten oder proprietäre Assets im Git-Repo.
-6. **VoxelGI-Zurückstellung**: Innenräume werden primär über SDFGI/analytische Leuchtquellen realisiert; VoxelGI bleibt aufgrund von Laufzeit-Voxelisierungs-Stalls und Szenenbaum-Inkompatibilität zurückgestellt.
+Passing Gate 6.2 requires meeting the following benchmarks:
+1. **Noticeable Indirect Bounce**: Ground and vegetation reflect warm/tinted bounce light onto vertical white walls (proven in Step 0 against an isolated facade with $\Delta R = +62.8$ LSB spectral shift and against fences with up to $\Delta G = +209$ LSB).
+2. **Dynamic Day/Night Response**: At night, indirect contribution shifts to cool moonlight; at sunset, to warm amber/orange.
+3. **Strict F4 Isolation**: Toggling via F4 disables SDFGI with zero residual artifacts (0 ms GI overhead, no color alteration).
+4. **Performance Verification**: A 3-minute continuous village walk in the live main loop maintains **p99 < 16.7 ms** (locked 60 FPS).
+5. **Zero Asset Violation**: Absolutely no baked lightmaps or proprietary assets stored in the git repository.
+6. **VoxelGI Deferral**: Interiors are handled primarily via SDFGI or analytical light sources; VoxelGI remains deferred due to runtime voxelization stalls and scene tree incompatibility.
 
 ---
 
-## 6. Nächste Schritte nach Freigabe
+## 6. Next Steps Upon Approval
 
-Gate 6.2 startet erst nach expliziter Freigabe durch den Nutzer / Reviewer:
-1. Feintuning der Kaskadendistanzen und Blend-Weights für weiche Übergänge.
-2. 3-minütiger Dauer-Benchmark mit kontinuierlichem Tag/Nacht-Wechsel.
-3. Dokumentation und formaler Gate-6.2-Abschlussbericht.
+Gate 6.2 work resumes upon explicit sign-off by user/reviewer:
+1. Fine-tuning cascade distances and blend weights for seamless transitions.
+2. 3-minute continuous benchmark covering unbroken day/night cycling.
+3. Documentation and formal Gate 6.2 closure report.

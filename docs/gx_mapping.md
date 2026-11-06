@@ -1,10 +1,10 @@
 # GX Graphics Layer Mapping & Profiling Analysis
 
-## 1. Architektur der Grafikschicht
+## 1. Graphics Layer Architecture
 
-Das Spiel rendert über eine 3-stufige Pipeline:
+The game renders through a 3-tier pipeline:
 ```
-Spiellogik (N64 Display Lists)
+Game Logic (N64 Display Lists)
       │
       ▼
 emu64 (Display List Interpreter & Emulation)
@@ -13,83 +13,83 @@ emu64 (Display List Interpreter & Emulation)
 GX (GameCube GPU API)
       │
       ▼
-PC-Backend (`port/pc/src/pc_gx.c`, `pc_gx_tev.c`, `pc_gx_texture.c`)
+PC Backend (`port/pc/src/pc_gx.c`, `pc_gx_tev.c`, `pc_gx_texture.c`)
       │
       ▼
 OpenGL 3.3 Core (GLAD)
 ```
 
-### Zeichenpfad:
-1. Spiellogik ruft `game_main() -> scene->exec()` auf und erzeugt N64 GBI Display Lists.
-2. `graph_task_set00() -> emu64_taskstart()` traversiert Display Lists und konvertiert sie in native GameCube GX-Aufrufe.
-3. `pc_gx.c` fängt die GX-Aufrufe ab.
-4. Vertices werden über ein Deferred-Commit-Modell gepuffert (`GXBegin`, `GXPosition*`, `GXColor*`, `GXTexCoord*`, `GXEnd`).
-5. Sobald sich Pipeline-Zustände (Textur, Matrix, Blend, Shader, Z-Mode, Fog) ändern oder ein Puffer voll ist, wird ein Batch geflusht (`pc_gx_flush()`).
-6. Am Frame-Ende (`VIWaitForRetrace`) werden verbleibende Batches gezeichnet und `SDL_GL_SwapWindow` aufgerufen.
+### Render Path:
+1. Game logic invokes `game_main() -> scene->exec()`, generating N64 GBI Display Lists.
+2. `graph_task_set00() -> emu64_taskstart()` traverses the display lists and translates them into native GameCube GX calls.
+3. `pc_gx.c` intercepts the GX calls.
+4. Vertices are buffered using a deferred commit model (`GXBegin`, `GXPosition*`, `GXColor*`, `GXTexCoord*`, `GXEnd`).
+5. Whenever pipeline state (texture, matrix, blend, shader, Z-mode, fog) changes or a buffer fills up, a batch is flushed (`pc_gx_flush()`).
+6. At frame end (`VIWaitForRetrace`), remaining batches are dispatched and `SDL_GL_SwapWindow` is called.
 
 ---
 
-## 2. Tatsächlich genutzte GX-Aufrufe (Runtime)
+## 2. GX Calls Used in Practice (Runtime)
 
-Analyse der Dirty-Flags und Profiler-Zähler:
+Analysis of dirty flags and profiler counters:
 
-### Matrizen & Projektion
-- `GXSetProjection` (~7–13 Aufrufe/Frame)
-- `GXLoadPosMtxImm`, `GXSetCurrentMtx` (~80–165 Aufrufe/Frame)
-  - Slot 0 (GX_PNMTX0): SHARED Vertices (Skinning / Charakter-Gelenke)
-  - Slot 1 (GX_PNMTX1): NONSHARED Vertices (Objekt-Transformationen)
+### Matrices & Projection
+- `GXSetProjection` (~7–13 calls/frame)
+- `GXLoadPosMtxImm`, `GXSetCurrentMtx` (~80–165 calls/frame)
+  - Slot 0 (GX_PNMTX0): SHARED vertices (skinning / character joints)
+  - Slot 1 (GX_PNMTX1): NONSHARED vertices (world object transforms)
 
-### Vertex-Submission & Formate
-- `GXBegin(primitive, vtxfmt, nverts)` (meist `GX_TRIANGLES` oder `GX_QUADS`)
+### Vertex Submission & Formats
+- `GXBegin(primitive, vtxfmt, nverts)` (predominantly `GX_TRIANGLES` or `GX_QUADS`)
 - `GXPosition3f32`, `GXPosition3s16`, `GXPosition1x16`
-- `GXNormal3s8`, `GXNormal1x16` (oft nicht gesetzt oder flach)
-- `GXColor4u8`, `GXColor1x16` (Vertexfarben enthalten teils vorab berechnetes Shading)
+- `GXNormal3s8`, `GXNormal1x16` (frequently unassigned or flat)
+- `GXColor4u8`, `GXColor1x16` (vertex colors frequently carry pre-baked shading)
 - `GXTexCoord2f32`, `GXTexCoord2s16`, `GXTexCoord1x16`
 - `GXSetVtxAttrFmt`, `GXSetArray`
 
-### TEV & Shader-Zustand (GameCube Texture Environment)
-- `GXSetNumTevStages` (1 bis 3 Stages genutzt)
-- `GXSetTevOrder` (Kanal- und Texturzuordnung pro Stage)
+### TEV & Shader State (GameCube Texture Environment)
+- `GXSetNumTevStages` (1 to 3 stages active)
+- `GXSetTevOrder` (channel and texture assignment per stage)
 - `GXSetTevColorIn`, `GXSetTevAlphaIn`
 - `GXSetTevColorOp`, `GXSetTevAlphaOp` (Bias: ADDHALF/SUBHALF, Scale: 2x/4x/0.5x, Clamp)
-- `GXSetTevColor`, `GXSetTevColorS10`, `GXSetTevKColor` (Konstante TEV-Register)
-- `GXSetTevSwapMode`, `GXSetTevSwapModeTable` (Kanal-Remapping)
+- `GXSetTevColor`, `GXSetTevColorS10`, `GXSetTevKColor` (constant TEV registers)
+- `GXSetTevSwapMode`, `GXSetTevSwapModeTable` (channel remapping)
 
-### Texturen & Filterung
-- `GXLoadTexObj` (~80–140 Binds/Frame)
-- 10 Texturformate im Spiel: I4, I8, IA4, IA8, RGB565, RGB5A3, RGBA8, CI4, CI8, CMPR (DXT1/S3TC)
-- `GXSetTexCoordGen2` (~60–100 Aufrufe/Frame)
+### Textures & Filtering
+- `GXLoadTexObj` (~80–140 binds/frame)
+- 10 texture formats utilized in-game: I4, I8, IA4, IA8, RGB565, RGB5A3, RGBA8, CI4, CI8, CMPR (DXT1/S3TC)
+- `GXSetTexCoordGen2` (~60–100 calls/frame)
 
-### Renderzustände & Post/EFB
-- `GXSetAlphaCompare` (Alpha-Test)
-- `GXSetBlendMode` (Alpha-Blending)
-- `GXSetZMode` (Z-Test, Z-Write)
+### Render States & Post/EFB
+- `GXSetAlphaCompare` (Alpha test)
+- `GXSetBlendMode` (Alpha blending)
+- `GXSetZMode` (Z-test, Z-write)
 - `GXSetCullMode` (Culling)
-- `GXSetFog` (Linearer Nebel)
+- `GXSetFog` (Linear fog)
 - `GXSetColorUpdate`, `GXSetAlphaUpdate`
-- `GXCopyDisp`, `GXCopyTex` (EFB-Framebuffer-Kopien für Spezialeffekte)
-- `GXSetNumIndStages`, `GXSetTevIndirect`, `GXSetIndTexMtx` (Indirekte Texturen)
+- `GXCopyDisp`, `GXCopyTex` (EFB framebuffer copies for special effects)
+- `GXSetNumIndStages`, `GXSetTevIndirect`, `GXSetIndTexMtx` (Indirect texturing)
 
 ---
 
-## 3. Drawcall- und Geometrie-Statistik
+## 3. Draw Call & Geometry Statistics
 
-Gemessen mit dem internen Frame-Profiler (`--profile 60`):
+Measured with the built-in frame profiler (`--profile 60`):
 
-| Metrik | Model Viewer | Titelbildschirm / Demo |
+| Metric | Model Viewer | Title Screen / Demo |
 |---|---|---|
-| **Drawcalls (Flushes)** | 6 | 210 – 255 |
-| **Vertices / Frame** | 78 | 7.000 – 7.300 |
-| **Puffer-Uploads / Frame** | 7,3 KB | 660 – 685 KB |
-| **Texturbindungen / Frame** | 12 | 236 – 248 |
-| **Shader-Wechsel / Frame** | 3 | 17 – 21 |
-| **Uniform-Uploads / Frame** | 31 | 750 – 795 |
-| **CPU-Zeit Spiellogik** | ~0,01 ms | ~0,20 ms |
-| **CPU-Zeit emu64** | ~0,06 ms | ~0,85 ms |
-| **CPU-Zeit GX-Flush** | ~0,03 ms | ~0,30 ms |
-| **Gesamte CPU-Frame-Zeit** | ~0,4 ms | ~1,4 ms (von 16,67 ms Budget) |
+| **Draw Calls (Flushes)** | 6 | 210 – 255 |
+| **Vertices / Frame** | 78 | 7,000 – 7,300 |
+| **Buffer Uploads / Frame** | 7.3 KB | 660 – 685 KB |
+| **Texture Binds / Frame** | 12 | 236 – 248 |
+| **Shader Switches / Frame** | 3 | 17 – 21 |
+| **Uniform Uploads / Frame** | 31 | 750 – 795 |
+| **Game Logic CPU Time** | ~0.01 ms | ~0.20 ms |
+| **emu64 CPU Time** | ~0.06 ms | ~0.85 ms |
+| **GX Flush CPU Time** | ~0.03 ms | ~0.30 ms |
+| **Total CPU Frame Time** | ~0.4 ms | ~1.4 ms (of 16.67 ms budget) |
 
-### Erkenntnis für die Godot-Bridge:
-- Mit ~220 Drawcalls und ~7.200 Vertices pro Frame ist das Datenvolumen sehr moderat (ca. 670 KB Roh-Vertexdaten pro Frame).
-- Dies ist für eine GDExtension-Brücke im 32-Bit-Adressraum exzellent handhabbar.
-- Bei 60 FPS entspricht das Datenvolumen von ~670 KB/Frame einem Durchsatz von ca. 40 MB/s, was auch für dynamische Buffer-Updates oder Ringpuffer völlig unkritisch ist.
+### Implications for the Godot Bridge:
+- At ~220 draw calls and ~7,200 vertices per frame, data volume is extremely light (~670 KB raw vertex data per frame).
+- This is trivially handled by a GDExtension bridge in 32-bit address space or over shared memory.
+- At 60 FPS, ~670 KB/frame corresponds to ~40 MB/s throughput, easily accommodated by dynamic buffer updates or ring buffers without latency concerns.
