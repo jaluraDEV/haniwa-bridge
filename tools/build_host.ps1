@@ -29,10 +29,54 @@ if ($MsysDir -ne "") {
     $gccCheck = Get-Command gcc -ErrorAction SilentlyContinue
     $ninjaCheck = Get-Command ninja -ErrorAction SilentlyContinue
     if (-not $gccCheck -or -not $ninjaCheck) {
-        Write-Error "Could not find a 32-bit MinGW toolchain (gcc.exe, ninja.exe). Please install MSYS2 (https://www.msys2.org/) with mingw-w64-i686-gcc and mingw-w64-i686-ninja."
-        exit 1
+        Write-Host "[1/4] No local MinGW32 toolchain detected. Preparing portable build tools..." -ForegroundColor Yellow
+        $CompilerDir = Join-Path $ScriptDir "tools\compiler"
+        if (-not (Test-Path $CompilerDir)) {
+            New-Item -ItemType Directory -Force -Path $CompilerDir | Out-Null
+        }
+
+        # Check if winget is available for automatic installation
+        $winget = Get-Command winget -ErrorAction SilentlyContinue
+        if ($winget) {
+            Write-Host "Attempting silent setup via Windows Package Manager (winget)..." -ForegroundColor Cyan
+            try {
+                & winget install --id MSYS2.MSYS2 --silent --accept-source-agreements --accept-package-agreements --disable-interactivity
+                if (Test-Path "C:\msys64\mingw32\bin\gcc.exe") {
+                    $MsysDir = "C:\msys64"
+                    $env:PATH = "$MsysDir\mingw32\bin;$MsysDir\usr\bin;" + $env:PATH
+                }
+            } catch {
+                Write-Host "winget installation skipped, trying direct archive download..." -ForegroundColor Gray
+            }
+        }
+
+        # Fallback: direct portable toolchain download
+        if ($MsysDir -eq "") {
+            $DownloadUrl = "https://github.com/jaluraDEV/haniwa-bridge/releases/download/tools-v1.0/haniwa-toolchain-win32.zip"
+            $ZipPath = Join-Path $CompilerDir "toolchain.zip"
+            Write-Host "Downloading portable toolchain archive (~45 MB)..." -ForegroundColor Cyan
+            try {
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                Invoke-WebRequest -Uri $DownloadUrl -OutFile $ZipPath -UseBasicParsing
+                Write-Host "Extracting toolchain via native tar..." -ForegroundColor Cyan
+                tar -xf $ZipPath -C $CompilerDir
+                Remove-Item -Force $ZipPath -ErrorAction SilentlyContinue
+                if (Test-Path "$CompilerDir\mingw32\bin\gcc.exe") {
+                    $MsysDir = "$CompilerDir"
+                    $env:PATH = "$MsysDir\mingw32\bin;$MsysDir\usr\bin;" + $env:PATH
+                }
+            } catch {
+                Write-Warning "Direct toolchain download failed: $_"
+            }
+        }
+
+        if ($MsysDir -eq "") {
+            Write-Error "Could not configure a 32-bit MinGW toolchain. Please install MSYS2 manually (https://www.msys2.org/) with mingw-w64-i686-gcc and mingw-w64-i686-ninja."
+            exit 1
+        }
+    } else {
+        Write-Host "[1/4] Using system PATH toolchain..." -ForegroundColor Green
     }
-    Write-Host "[1/4] Using system PATH toolchain..." -ForegroundColor Green
 }
 
 # 2. Configure CMake if build.ninja is missing
