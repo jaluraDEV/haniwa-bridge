@@ -8,11 +8,11 @@
   <a href="https://github.com/jaluraDEV/haniwa-bridge"><img src="https://img.shields.io/badge/Platform-Windows%20x64-0078D6?logo=windows" alt="Platform: Windows x64" /></a>
   <a href="https://godotengine.org/"><img src="https://img.shields.io/badge/Renderer-Godot%204%20Forward%2B%20(Vulkan)-478CBF?logo=godotengine" alt="Renderer: Godot 4 Forward+" /></a>
   <a href="#%EF%B8%8F-legal-notice--byo-rom-policy"><img src="https://img.shields.io/badge/Assets-BYO--ROM%20(No%20Assets%20Included)-2ea44f" alt="BYO-ROM: No Proprietary Assets Included" /></a>
-  <a href="https://github.com/jaluraDEV/haniwa-bridge/releases/latest"><img src="https://img.shields.io/badge/Release-v0.2.0%20(Clean%20BYO--ROM)-orange?logo=github" alt="Latest Release: v0.2.0" /></a>
+  <a href="https://github.com/jaluraDEV/haniwa-bridge/releases/latest"><img src="https://img.shields.io/badge/Release-v0.2.1%20(Clean%20BYO--ROM)-orange?logo=github" alt="Latest Release: v0.2.1" /></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/jaluraDEV/haniwa-bridge/releases/latest"><img src="https://img.shields.io/badge/Download-Latest%20Release%20(v0.2.0)-blue?style=for-the-badge&logo=github" alt="Download Latest Release" /></a>
+  <a href="https://github.com/jaluraDEV/haniwa-bridge/releases/latest"><img src="https://img.shields.io/badge/Download-Latest%20Release%20(v0.2.1)-blue?style=for-the-badge&logo=github" alt="Download Latest Release" /></a>
 </p>
 
 <p align="center">
@@ -91,17 +91,20 @@ flowchart LR
 
 ---
 
-## 🚀 Running the Project
+## 🚀 Quick Start / How to Play
 
-1. **Launch the Application**:
-   - Run the launcher by running `run_launcher.bat` (or compile the standalone launcher via `tools/build_release_package.ps1`).
-2. **One-Time ROM Extraction**:
-   - On your first run, the Launcher displays `⚠️ STATUS: NOT EXTRACTED — USA ROM (GAFE01_00) Required`.
-   - Click **[ Select USA ROM (.iso/.ciso/.gcm) & Extract ]** and choose your *Animal Crossing (USA Rev 0, GAFE01_00)* disc image.
-   - Wait ~2 seconds for extraction to complete. The status indicator will turn green: `● STATUS: EXTRACTED & READY (USA Rev 0 • GAFE01_00)`.
-   - On all future launches, the Launcher automatically detects the extracted data in `orig/GAFE01_00/`.
-3. **Play**:
-   - Configure your preferences (**Fast Start**, **Fullscreen**) and click **[ ▶ Launch Game ]**.
+1. **Download & Extract**:
+   - Download the latest `HaniwaBridge-v0.2.1-Windows-x64-Setup.zip` from [Releases](https://github.com/jaluraDEV/haniwa-bridge/releases/latest) and unzip it into any folder.
+2. **Start the Launcher**:
+   - Double-click `HaniwaLauncher.exe` (or run `run_launcher.bat` if working directly from the source repository).
+3. **1-Click Engine Build**:
+   - On first launch, click **[ ⚙️ 1-Click Build: Compile Engine ]**.
+   - The launcher autonomously configures the portable compiler and builds `HaniwaHost.exe` locally from clean C source code, complete with live monotonic progress and status logs.
+4. **One-Time ROM Extraction**:
+   - Drag and drop your **Animal Crossing (USA Rev 0 / `GAFE01_00`)** disc image (`.iso`, `.ciso`, or `.gcm`) onto the window, or click **[ Select USA ROM & Extract ]**.
+   - Extraction finishes in ~2 seconds. The indicator displays: `● STATUS: EXTRACTED & READY`.
+5. **Play**:
+   - Check your options (**Fast Start**, **Fullscreen**) and click **[ ▶ Launch Game ]**! All future launches jump directly to playing.
 
 ---
 
