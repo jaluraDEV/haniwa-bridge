@@ -81,6 +81,7 @@ ACGC-PC-Port-master/
 !godot/keybindings.ini.example
 shadow_trace.txt
 water_debug.txt
+build_progress.txt
 godot/shaders/acgc_water_2.gdshader
 
 # 7. IDE & OS

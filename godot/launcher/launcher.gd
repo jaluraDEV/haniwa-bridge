@@ -1,16 +1,16 @@
 extends Control
 
-const MANIFEST_REL_PATH := "orig/GAFE01_00/manifest.json"
-const DOL_REL_PATH      := "orig/GAFE01_00/sys/main.dol"
-const REL_REL_PATH      := "orig/GAFE01_00/sys/foresta.rel"
-const COPYDATE_REL_PATH := "orig/GAFE01_00/files/COPYDATE"
-const PROGRESS_REL_PATH := "orig/GAFE01_00/extract_progress.txt"
+const MANIFEST_REL_PATH       := "orig/GAFE01_00/manifest.json"
+const DOL_REL_PATH            := "orig/GAFE01_00/sys/main.dol"
+const REL_REL_PATH            := "orig/GAFE01_00/sys/foresta.rel"
+const COPYDATE_REL_PATH       := "orig/GAFE01_00/files/COPYDATE"
+const PROGRESS_REL_PATH       := "orig/GAFE01_00/extract_progress.txt"
+const BUILD_PROGRESS_REL_PATH := "build_progress.txt"
 
 var _root_dir: String = ""
 var _is_extracted: bool = false
 var _extract_pid: int = -1
 var _build_pid: int = -1
-var _build_anim_t: float = 0.0
 var _launching: bool = false
 
 # UI Nodes (constructed programmatically for zero .tscn corruption risk)
@@ -326,13 +326,17 @@ func _start_build_host() -> void:
 	if _build_pid != -1 or _extract_pid != -1 or _launching:
 		return
 
+	var old_prog := _root_dir.path_join(BUILD_PROGRESS_REL_PATH)
+	if FileAccess.file_exists(old_prog):
+		DirAccess.remove_absolute(old_prog)
+
 	_btn_launch.disabled = true
 	_btn_extract.disabled = true
 	_progress_bar.visible = true
 	_progress_bar.max_value = 100.0
 	_progress_bar.value = 0.0
 	_progress_label.visible = true
-	_progress_label.text = "Compiling HaniwaHost.exe from source (Ninja + GCC)..."
+	_progress_label.text = "Initializing build environment..."
 	_status_badge.text = "● STATUS: COMPILING HOST ENGINE..."
 	_status_badge.add_theme_color_override("font_color", Color(0.45, 0.80, 1.0))
 	_status_detail.text = "Building 32-bit headless C host locally on your machine. This compiles the game logic privately on your PC for 100% legal BYO-ROM compliance."
@@ -403,8 +407,16 @@ func _on_rom_file_selected(rom_path: String) -> void:
 
 func _process(_delta: float) -> void:
 	if _build_pid != -1:
-		_build_anim_t += _delta * 40.0
-		_progress_bar.value = fmod(_build_anim_t, 100.0)
+		var prog_file := _root_dir.path_join(BUILD_PROGRESS_REL_PATH)
+		if FileAccess.file_exists(prog_file):
+			var raw := FileAccess.get_file_as_string(prog_file).strip_edges()
+			var lines := raw.split("\n", false)
+			if lines.size() >= 1:
+				var target_val := float(lines[0])
+				_progress_bar.value = move_toward(_progress_bar.value, target_val, _delta * 65.0)
+				if lines.size() >= 2:
+					_progress_label.text = lines[1].strip_edges()
+
 		if not OS.is_process_running(_build_pid):
 			_build_pid = -1
 			_progress_bar.visible = false

@@ -3,7 +3,13 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $PSScriptRoot
 Set-Location $ScriptDir
 
-Write-Host "=== HaniwaHost Builder ===" -ForegroundColor Cyan
+function Set-BuildProgress([double]$percent, [string]$msg) {
+    Write-Host $msg
+    $content = "$percent`n$msg"
+    try { [System.IO.File]::WriteAllText("$ScriptDir\build_progress.txt", $content) } catch {}
+}
+
+Set-BuildProgress 5 "[1/4] Discovering compiler toolchain..."
 
 # 1. Discover Toolchain
 $MsysCandidates = @(
@@ -22,14 +28,14 @@ foreach ($cand in $MsysCandidates) {
 }
 
 if ($MsysDir -ne "") {
-    Write-Host "[1/4] Found MinGW32 toolchain at: $MsysDir" -ForegroundColor Green
+    Set-BuildProgress 25 "[1/4] Found MinGW32 toolchain at: $MsysDir"
     $env:PATH = "$MsysDir\mingw32\bin;$MsysDir\usr\bin;" + $env:PATH
 } else {
     # Check if gcc and ninja are already in PATH
     $gccCheck = Get-Command gcc -ErrorAction SilentlyContinue
     $ninjaCheck = Get-Command ninja -ErrorAction SilentlyContinue
     if (-not $gccCheck -or -not $ninjaCheck) {
-        Write-Host "[1/4] No local MinGW32 toolchain detected. Preparing portable build tools..." -ForegroundColor Yellow
+        Set-BuildProgress 10 "[1/4] Preparing portable build tools..."
         $CompilerDir = Join-Path $ScriptDir "tools\compiler"
         if (-not (Test-Path $CompilerDir)) {
             New-Item -ItemType Directory -Force -Path $CompilerDir | Out-Null
@@ -38,7 +44,7 @@ if ($MsysDir -ne "") {
         # Check if winget is available for automatic installation
         $winget = Get-Command winget -ErrorAction SilentlyContinue
         if ($winget) {
-            Write-Host "Attempting silent setup via Windows Package Manager (winget)..." -ForegroundColor Cyan
+            Set-BuildProgress 15 "Attempting silent setup via Windows Package Manager (winget)..."
             try {
                 & winget install --id MSYS2.MSYS2 --silent --accept-source-agreements --accept-package-agreements --disable-interactivity
                 if (Test-Path "C:\msys64\mingw32\bin\gcc.exe") {
@@ -54,11 +60,11 @@ if ($MsysDir -ne "") {
         if ($MsysDir -eq "") {
             $DownloadUrl = "https://github.com/jaluraDEV/haniwa-bridge/releases/download/tools-v1.0/haniwa-toolchain-win32.zip"
             $ZipPath = Join-Path $CompilerDir "toolchain.zip"
-            Write-Host "Downloading portable toolchain archive (~45 MB)..." -ForegroundColor Cyan
+            Set-BuildProgress 18 "Downloading portable toolchain archive (~45 MB)..."
             try {
                 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
                 Invoke-WebRequest -Uri $DownloadUrl -OutFile $ZipPath -UseBasicParsing
-                Write-Host "Extracting toolchain via native tar..." -ForegroundColor Cyan
+                Set-BuildProgress 22 "Extracting toolchain via native tar..."
                 tar -xf $ZipPath -C $CompilerDir
                 Remove-Item -Force $ZipPath -ErrorAction SilentlyContinue
                 if (Test-Path "$CompilerDir\mingw32\bin\gcc.exe") {
@@ -75,7 +81,7 @@ if ($MsysDir -ne "") {
             exit 1
         }
     } else {
-        Write-Host "[1/4] Using system PATH toolchain..." -ForegroundColor Green
+        Set-BuildProgress 25 "[1/4] Using system PATH toolchain..."
     }
 }
 
@@ -88,30 +94,46 @@ if (-not (Test-Path $BuildDir)) {
 Push-Location $BuildDir
 try {
     if (-not (Test-Path "build.ninja")) {
-        Write-Host "[2/4] Configuring CMake project with Ninja..." -ForegroundColor Yellow
+        Set-BuildProgress 35 "[2/4] Configuring CMake project with Ninja..."
         cmake -G Ninja ..
         if ($LASTEXITCODE -ne 0) { throw "CMake configuration failed." }
     } else {
-        Write-Host "[2/4] CMake project already configured." -ForegroundColor Green
+        Set-BuildProgress 40 "[2/4] CMake project already configured."
     }
 
     # 3. Compile port objects via Ninja
-    Write-Host "[3/4] Compiling game port source files (Ninja)..." -ForegroundColor Yellow
-    ninja
+    Set-BuildProgress 45 "[3/4] Checking build targets (Ninja)..."
+    & ninja 2>&1 | ForEach-Object {
+        $line = $_.ToString().Trim()
+        if ($line -match '\[\s*(\d+)/(\d+)\]\s*(.*)') {
+            $cur = [int]$matches[1]
+            $tot = [int]$matches[2]
+            $pct = 45 + [math]::Round(($cur / [math]::Max($tot, 1)) * 35, 1)
+            $action = $matches[3]
+            if ($action.Length -gt 55) { $action = "..." + $action.Substring($action.Length - 52) }
+            Set-BuildProgress $pct "[$cur/$tot] $action"
+        } elseif ($line -ne "") {
+            Write-Host $line
+            if ($line -like "*no work to do*") {
+                Set-BuildProgress 75 "[3/4] All objects up to date."
+            }
+        }
+    }
     if ($LASTEXITCODE -ne 0) { throw "Ninja compilation failed." }
 
     # Pack libacgc_port.a
-    Write-Host "Packing static archive libacgc_port.a..." -ForegroundColor Gray
+    Set-BuildProgress 82 "Packing static archive libacgc_port.a..."
     bash -c "find CMakeFiles/ac_pc.dir -name '*.obj' > objects.rsp && ar rcs libacgc_port.a @objects.rsp && rm -f objects.rsp"
 } finally {
     Pop-Location
 }
 
 # 4. Link HaniwaHost.exe
-Write-Host "[4/4] Linking HaniwaHost.exe..." -ForegroundColor Yellow
+Set-BuildProgress 88 "[4/4] Linking HaniwaHost.exe..."
 bash -c "gcc -m32 -O2 -static-libgcc -static-libstdc++ -Wl,--large-address-aware -Wl,--disable-dynamicbase -Wl,--allow-multiple-definition -Ibridge/include -Iport/pc/include -Iport/include bridge/src/acgc_host.c bridge/src/acgc_api_impl.c -Lport/pc/build32 -Wl,--start-group port/pc/build32/libacgc_port.a port/pc/build32/libglad.a -Wl,--end-group -lSDL2 -lopengl32 -lwinmm -limm32 -lversion -lsetupapi -lkernel32 -luser32 -lgdi32 -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 -lstdc++ -o HaniwaHost.exe"
 
 # Copy runtime DLLs next to HaniwaHost.exe
+Set-BuildProgress 95 "Verifying runtime DLLs..."
 if ($MsysDir -ne "") {
     Copy-Item -Force "$MsysDir\mingw32\bin\SDL2.dll" "$ScriptDir\SDL2.dll" -ErrorAction SilentlyContinue
     Copy-Item -Force "$MsysDir\mingw32\bin\libgcc_s_dw2-1.dll" "$ScriptDir\libgcc_s_dw2-1.dll" -ErrorAction SilentlyContinue
@@ -120,7 +142,7 @@ if ($MsysDir -ne "") {
 }
 
 if (Test-Path "$ScriptDir\HaniwaHost.exe") {
-    Write-Host "=== SUCCESS: HaniwaHost.exe is ready! ===" -ForegroundColor Green
+    Set-BuildProgress 100 "=== SUCCESS: HaniwaHost.exe is ready! ==="
     exit 0
 } else {
     Write-Error "Link finished but HaniwaHost.exe was not created."
