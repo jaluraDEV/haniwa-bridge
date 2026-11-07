@@ -34,8 +34,9 @@ All original gameplay logic, physics, collision, NPC schedules, and memory card 
 
 ## ✨ Key Features
 
-- **Integrated ROM Extractor & Launcher (`ACGC_Launcher.exe`)**:
-  - One-time extraction of `main.dol`, decompressed `foresta.rel`, and GameCube FST archives from a user-supplied USA ROM (`GAFE01_00`).
+- **1-Click Autonomous Builder & ROM Extractor (`HaniwaLauncher.exe`)**:
+  - Automatically compiles the 32-bit headless C host (`HaniwaHost.exe`) locally from source on first launch (no manual command-line building required).
+  - Drag-and-drop or select your GameCube USA ROM (`GAFE01_00`) for one-time local extraction.
   - Persistent status verification on every launch (`✅ Extracted & Ready` vs. `⚠️ Not Extracted`).
   - Direct one-click game launch — no `.bat` scripts or mounted ISO required after initial extraction.
 - **Dual-Process 32-Bit / 64-Bit Shared Memory Architecture (`ACGC_SHM_V1`)**:
@@ -153,7 +154,14 @@ This compiles `bridge/src/acgc_shm_client.c` into `godot/bin/acgc_shm_client_x64
 
 ### Step 2: Build the 32-Bit Headless Host (`HaniwaHost.exe`)
 
-From PowerShell in the repository root:
+You can build the host with 1 click using the autonomous builder:
+```powershell
+# Autonomous 1-click build (automatically finds MSYS2 / MinGW32):
+powershell -ExecutionPolicy Bypass -File tools/build_host.ps1
+# Or double-click tools/build_host.bat in Windows Explorer
+```
+
+*(Alternatively, to build manually via standard CMake/Ninja):*
 ```powershell
 $env:PATH = "C:\msys64\mingw32\bin;C:\msys64\usr\bin;" + $env:PATH
 mkdir -Force port/pc/build32 | Out-Null

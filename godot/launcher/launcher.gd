@@ -9,6 +9,8 @@ const PROGRESS_REL_PATH := "orig/GAFE01_00/extract_progress.txt"
 var _root_dir: String = ""
 var _is_extracted: bool = false
 var _extract_pid: int = -1
+var _build_pid: int = -1
+var _build_anim_t: float = 0.0
 var _launching: bool = false
 
 # UI Nodes (constructed programmatically for zero .tscn corruption risk)
@@ -43,6 +45,7 @@ func _ready() -> void:
 
 	_build_ui()
 	_load_launcher_settings()
+	get_window().files_dropped.connect(_on_files_dropped)
 	_verify_extracted_data()
 
 func _resolve_root_dir() -> void:
@@ -273,6 +276,16 @@ func _build_ui() -> void:
 	add_child(_file_dialog)
 
 func _verify_extracted_data() -> void:
+	var host_exe := _get_host_exe_path()
+	if host_exe.is_empty():
+		_is_extracted = false
+		_status_badge.text = "● STATUS: ENGINE BUILD REQUIRED"
+		_status_badge.add_theme_color_override("font_color", Color(1.0, 0.72, 0.28))
+		_status_detail.text = "HaniwaHost.exe has not been built yet. Click '1-Click Build: Compile Engine' below to compile the 32-bit headless host locally on your machine."
+		_btn_launch.disabled = true
+		_btn_extract.text = "⚙️  1-Click Build: Compile Engine"
+		return
+
 	var manifest_path := _root_dir.path_join(MANIFEST_REL_PATH)
 	var dol_path := _root_dir.path_join(DOL_REL_PATH)
 	var rel_path := _root_dir.path_join(REL_REL_PATH)
@@ -296,14 +309,58 @@ func _verify_extracted_data() -> void:
 
 	_status_badge.text = "● STATUS: NOT EXTRACTED — USA ROM (GAFE01_00) Required"
 	_status_badge.add_theme_color_override("font_color", Color(1.0, 0.72, 0.28))
-	_status_detail.text = "No extracted game data found. Click 'Select USA ROM & Extract' to perform the one-time extraction from your Animal Crossing (USA Rev 0, GAFE01_00) .iso, .ciso, or .gcm disc image."
+	_status_detail.text = "No extracted game data found. Click 'Select USA ROM & Extract' (or drag and drop your .iso here) to perform the one-time extraction from your Animal Crossing (USA Rev 0, GAFE01_00) disc image."
 	_btn_launch.disabled = true
 	_btn_extract.text = "Select USA ROM (.iso/.ciso/.gcm) & Extract"
 
 func _on_extract_pressed() -> void:
-	if _extract_pid != -1 or _launching:
+	if _extract_pid != -1 or _build_pid != -1 or _launching:
+		return
+	var host_exe := _get_host_exe_path()
+	if host_exe.is_empty():
+		_start_build_host()
 		return
 	_file_dialog.popup_centered(Vector2i(800, 560))
+
+func _start_build_host() -> void:
+	if _build_pid != -1 or _extract_pid != -1 or _launching:
+		return
+
+	_btn_launch.disabled = true
+	_btn_extract.disabled = true
+	_progress_bar.visible = true
+	_progress_bar.max_value = 100.0
+	_progress_bar.value = 0.0
+	_progress_label.visible = true
+	_progress_label.text = "Compiling HaniwaHost.exe from source (Ninja + GCC)..."
+	_status_badge.text = "● STATUS: COMPILING HOST ENGINE..."
+	_status_badge.add_theme_color_override("font_color", Color(0.45, 0.80, 1.0))
+	_status_detail.text = "Building 32-bit headless C host locally on your machine. This compiles the game logic privately on your PC for 100% legal BYO-ROM compliance."
+
+	var script_path := _root_dir.path_join("tools/build_host.ps1")
+	var args := PackedStringArray(["-ExecutionPolicy", "Bypass", "-File", script_path])
+	_build_pid = OS.create_process("powershell.exe", args, false)
+	if _build_pid <= 0:
+		_build_pid = -1
+		_btn_extract.disabled = false
+		_progress_bar.visible = false
+		_progress_label.visible = false
+		_status_badge.text = "● ERROR: Failed to start PowerShell build script."
+		_status_badge.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
+		_status_detail.text = "Could not launch 'powershell.exe -File %s'. You can run 'tools\\build_host.bat' manually." % script_path
+
+func _on_files_dropped(files: PackedStringArray) -> void:
+	if files.is_empty() or _extract_pid != -1 or _build_pid != -1 or _launching:
+		return
+	for file_path in files:
+		var ext := file_path.get_extension().to_lower()
+		if ext in ["iso", "ciso", "gcm"]:
+			var host_exe := _get_host_exe_path()
+			if host_exe.is_empty():
+				_status_detail.text = "Please build HaniwaHost.exe first by clicking the build button."
+				return
+			_on_rom_file_selected(file_path)
+			return
 
 func _get_host_exe_path() -> String:
 	var haniwa := _root_dir.path_join("HaniwaHost.exe")
@@ -345,6 +402,25 @@ func _on_rom_file_selected(rom_path: String) -> void:
 		_status_badge.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
 
 func _process(_delta: float) -> void:
+	if _build_pid != -1:
+		_build_anim_t += _delta * 40.0
+		_progress_bar.value = fmod(_build_anim_t, 100.0)
+		if not OS.is_process_running(_build_pid):
+			_build_pid = -1
+			_progress_bar.visible = false
+			_progress_label.visible = false
+			_btn_extract.disabled = false
+			var host_exe := _get_host_exe_path()
+			if not host_exe.is_empty():
+				_status_badge.text = "● SUCCESS: Engine Built Successfully!"
+				_status_badge.add_theme_color_override("font_color", Color(0.30, 0.92, 0.52))
+				_status_detail.text = "HaniwaHost.exe has been compiled and is ready."
+			else:
+				_status_badge.text = "● BUILD FAILED: Check tools/build_host.bat"
+				_status_badge.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
+				_status_detail.text = "Compilation finished without creating HaniwaHost.exe. Please verify MSYS2 / MinGW32 or run 'tools/build_host.bat' for error details."
+			_verify_extracted_data()
+
 	if _extract_pid != -1:
 		var prog_file := _root_dir.path_join(PROGRESS_REL_PATH)
 		if FileAccess.file_exists(prog_file):
