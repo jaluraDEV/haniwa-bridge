@@ -8,6 +8,11 @@
   <a href="https://github.com/jaluraDEV/haniwa-bridge"><img src="https://img.shields.io/badge/Platform-Windows%20x64-0078D6?logo=windows" alt="Platform: Windows x64" /></a>
   <a href="https://godotengine.org/"><img src="https://img.shields.io/badge/Renderer-Godot%204%20Forward%2B%20(Vulkan)-478CBF?logo=godotengine" alt="Renderer: Godot 4 Forward+" /></a>
   <a href="#%EF%B8%8F-legal-notice--byo-rom-policy"><img src="https://img.shields.io/badge/Assets-BYO--ROM%20(No%20Assets%20Included)-2ea44f" alt="BYO-ROM: No Proprietary Assets Included" /></a>
+  <a href="https://github.com/jaluraDEV/haniwa-bridge/releases/latest"><img src="https://img.shields.io/badge/Release-v0.2.0%20(Clean%20BYO--ROM)-orange?logo=github" alt="Latest Release: v0.2.0" /></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/jaluraDEV/haniwa-bridge/releases/latest"><img src="https://img.shields.io/badge/Download-Latest%20Release%20(v0.2.0)-blue?style=for-the-badge&logo=github" alt="Download Latest Release" /></a>
 </p>
 
 <p align="center">

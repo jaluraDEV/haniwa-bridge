@@ -1,36 +1,87 @@
-# tools/build_release_package.ps1 — Builds 32-bit Host, 64-bit SHM Client DLL, and packages dist/
+# tools/build_release_package.ps1 — Assembles 100% Clean BYO-ROM Self-Builder Release Package
+param(
+    [string]$Version = "v0.2.0",
+    [switch]$IncludePrebuiltHost = $false
+)
+
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
-Write-Host "[1/4] Building 32-bit Headless Host (HaniwaHost.exe)..."
-$MsysDir = if (Test-Path "$env:USERPROFILE\msys64") { "$env:USERPROFILE\msys64" } else { "C:\msys64" }
-$env:PATH = "$MsysDir\mingw32\bin;$MsysDir\usr\bin;" + $env:PATH
-Push-Location "port/pc/build32"
-ninja
-bash -c "find CMakeFiles/ac_pc.dir -name '*.obj' > objects.rsp && ar rcs libacgc_port.a @objects.rsp && rm -f objects.rsp"
-Pop-Location
-bash -c "gcc -m32 -O2 -static-libgcc -static-libstdc++ -Wl,--large-address-aware -Wl,--disable-dynamicbase -Wl,--allow-multiple-definition -Ibridge/include -Iport/pc/include -Iport/include bridge/src/acgc_host.c bridge/src/acgc_api_impl.c -Lport/pc/build32 -Wl,--start-group port/pc/build32/libacgc_port.a port/pc/build32/libglad.a -Wl,--end-group -lSDL2 -lopengl32 -lwinmm -limm32 -lversion -lsetupapi -lkernel32 -luser32 -lgdi32 -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 -lstdc++ -o HaniwaHost.exe"
+Write-Host "=== Building HaniwaBridge Clean Release Package ($Version) ===" -ForegroundColor Cyan
 
-Write-Host "[2/4] Preparing clean dist/ directory..."
-if (Test-Path "dist") {
-    Remove-Item -Recurse -Force "dist"
+# 1. Clean and prepare dist directory
+$Dist = Join-Path $Root "dist"
+if (Test-Path $Dist) {
+    Remove-Item -Recurse -Force $Dist
 }
-New-Item -ItemType Directory -Force -Path "dist/bin" | Out-Null
-Copy-Item -Force "HaniwaHost.exe" "dist/HaniwaHost.exe"
-Copy-Item -Force "SDL2.dll" "dist/SDL2.dll"
-Copy-Item -Force "libgcc_s_dw2-1.dll" "dist/libgcc_s_dw2-1.dll"
-Copy-Item -Force "libstdc++-6.dll" "dist/libstdc++-6.dll"
-Copy-Item -Force "libwinpthread-1.dll" "dist/libwinpthread-1.dll"
-Copy-Item -Force "godot/bin/acgc_shm_client_x64.dll" "dist/acgc_shm_client_x64.dll"
-Copy-Item -Force "godot/bin/acgc_shm_client_x64.dll" "dist/bin/acgc_shm_client_x64.dll"
-Copy-Item -Force "README.md" "dist/README.md"
-Copy-Item -Force "LICENSE" "dist/LICENSE"
+New-Item -ItemType Directory -Force -Path "$Dist\bin" | Out-Null
+New-Item -ItemType Directory -Force -Path "$Dist\tools" | Out-Null
+New-Item -ItemType Directory -Force -Path "$Dist\bridge" | Out-Null
+New-Item -ItemType Directory -Force -Path "$Dist\port" | Out-Null
 
-Write-Host "[3/4] Exporting HaniwaLauncher.exe via Godot 4 (64-bit)..."
+# 2. Export 64-Bit Godot Launcher
+Write-Host "[1/5] Exporting HaniwaLauncher.exe via Godot 4 (64-bit)..." -ForegroundColor Yellow
 if (Test-Path "Godot_v4.7.2-stable_win64.exe") {
-    $distPath = (Resolve-Path "dist").Path.Replace("\", "/") + "/HaniwaLauncher.exe"
-    .\Godot_v4.7.2-stable_win64.exe --headless --path godot --export-release "Windows Desktop" "$distPath"
+    $launcherPath = ($Dist.Replace("\", "/")) + "/HaniwaLauncher.exe"
+    .\Godot_v4.7.2-stable_win64.exe --headless --path godot --export-release "Windows Desktop" "$launcherPath"
+} else {
+    throw "Godot_v4.7.2-stable_win64.exe not found in project root."
 }
 
-Write-Host "[4/4] Package ready in dist/!"
+# 3. Copy GDExtension bridge & open-source runtime DLLs
+Write-Host "[2/5] Copying open-source runtime DLLs & GDExtension..." -ForegroundColor Yellow
+Copy-Item -Force "godot\bin\acgc_shm_client_x64.dll" "$Dist\acgc_shm_client_x64.dll"
+Copy-Item -Force "godot\bin\acgc_shm_client_x64.dll" "$Dist\bin\acgc_shm_client_x64.dll"
+Copy-Item -Force "SDL2.dll" "$Dist\SDL2.dll"
+Copy-Item -Force "libgcc_s_dw2-1.dll" "$Dist\libgcc_s_dw2-1.dll"
+Copy-Item -Force "libstdc++-6.dll" "$Dist\libstdc++-6.dll"
+Copy-Item -Force "libwinpthread-1.dll" "$Dist\libwinpthread-1.dll"
+Copy-Item -Force "README.md" "$Dist\README.md"
+Copy-Item -Force "LICENSE" "$Dist\LICENSE"
+
+# 4. Copy build scripts & clean C sources for local compilation
+Write-Host "[3/5] Copying clean source code & autonomous build tools..." -ForegroundColor Yellow
+Copy-Item -Force "tools\build_host.bat" "$Dist\tools\build_host.bat"
+Copy-Item -Force "tools\build_host.ps1" "$Dist\tools\build_host.ps1"
+
+# Copy bridge/
+Copy-Item -Recurse -Force "bridge" "$Dist\"
+
+# Copy port/ excluding build32 cache & binary outputs
+robocopy "port" "$Dist\port" /E /XD build32 /XF *.exe *.dll *.a *.obj *.o > $null
+if ($LASTEXITCODE -ge 8) {
+    throw "robocopy failed with exit code $LASTEXITCODE"
+}
+
+# Optional: developer test mode (strictly excluded from official release)
+if ($IncludePrebuiltHost) {
+    Write-Warning "DEVELOPER FLAG: Including prebuilt HaniwaHost.exe in dist/ for local testing."
+    Copy-Item -Force "HaniwaHost.exe" "$Dist\HaniwaHost.exe"
+} else {
+    Write-Host "[4/5] Zero-Asset Guarantee: Prebuilt host is NOT included. User will compile locally via 1-click launcher." -ForegroundColor Green
+}
+
+# 5. Create Release ZIP Archive
+Write-Host "[5/5] Creating release zip archive..." -ForegroundColor Yellow
+$ArtifactsDir = Join-Path $Root "release_artifacts"
+if (-not (Test-Path $ArtifactsDir)) {
+    New-Item -ItemType Directory -Force -Path $ArtifactsDir | Out-Null
+}
+$ZipName = "HaniwaBridge-$Version-Windows-x64-Setup.zip"
+$ZipPath = Join-Path $ArtifactsDir $ZipName
+if (Test-Path $ZipPath) {
+    Remove-Item -Force $ZipPath
+}
+
+# Native zip compression via tar or Compress-Archive
+Push-Location $Dist
+try {
+    tar -a -cf $ZipPath *
+} finally {
+    Pop-Location
+}
+
+$zipSize = [math]::Round((Get-Item $ZipPath).Length / 1MB, 2)
+Write-Host "=== SUCCESS: Release archive created! ===" -ForegroundColor Green
+Write-Host "Path: $ZipPath ($zipSize MB)" -ForegroundColor Cyan
