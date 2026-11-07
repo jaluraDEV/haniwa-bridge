@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
         else if (strcmp(argv[i], "--out-dir") == 0 && i + 1 < argc) { extract_out_dir = argv[++i]; }
         else if (strcmp(argv[i], "--log-file") == 0 && i + 1 < argc) { log_file_path = argv[++i]; }
         else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
-            printf("usage: acgc_host_x86.exe [--extract-rom ISO_PATH] [--out-dir DIR] [--log-file PATH] [--test-shm] [--fixed-clock] [--frames N] [--scene ID] [--rom PATH]\n");
+            printf("usage: HaniwaHost.exe [--extract-rom ISO_PATH] [--out-dir DIR] [--log-file PATH] [--test-shm] [--fixed-clock] [--frames N] [--scene ID] [--rom PATH]\n");
             return 0;
         }
     }

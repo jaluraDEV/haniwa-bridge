@@ -39,7 +39,7 @@ All original gameplay logic, physics, collision, NPC schedules, and memory card 
   - Persistent status verification on every launch (`✅ Extracted & Ready` vs. `⚠️ Not Extracted`).
   - Direct one-click game launch — no `.bat` scripts or mounted ISO required after initial extraction.
 - **Dual-Process 32-Bit / 64-Bit Shared Memory Architecture (`ACGC_SHM_V1`)**:
-  - **32-Bit Headless C Host (`acgc_host_x86.exe`)**: Executes the decompiled GameCube game code with original 32-bit pointer ABI compatibility at an integer-paced 60.00 Hz.
+  - **32-Bit Headless C Host (`HaniwaHost.exe`)**: Executes the decompiled GameCube game code with original 32-bit pointer ABI compatibility at an integer-paced 60.00 Hz.
   - **32 MB Lock-Free IPC (`Local\ACGC_SHM_V1`)**: Double-buffered 12 MB `ACFP` (Animal Crossing Frame Packet) slots, 4 MB SPSC lock-free audio ring buffer (100 ms target cushion), real-time state block (RTC, weather, season, scene ID), and reliable sequence-numbered EFB copy handshakes.
   - **64-Bit Godot 4 Forward+ Client (`acgc_shm_client_x64.dll` + GDScript)**: Unrestricted 64-bit address space and VRAM for modern Vulkan rendering, shader caching, and high-resolution shadow maps.
 - **Dynamic Real-Time Lighting & Retro Parity**:
@@ -55,7 +55,7 @@ All original gameplay logic, physics, collision, NPC schedules, and memory card 
 
 ```mermaid
 flowchart LR
-    subgraph Host["32-Bit Headless C Host (acgc_host_x86.exe)"]
+    subgraph Host["32-Bit Headless C Host (HaniwaHost.exe)"]
         Logic["Decompiled Game Logic\n(60.00 Hz Integer Pacer)"]
         Emu64["emu64 Display List Interpreter"]
         Capture["GX Render Capture (pc_capture.c)\n+ DSP Audio Synthesizer"]
@@ -151,7 +151,7 @@ From an **MSYS2 MINGW64** shell (or PowerShell with `mingw64/bin` in `PATH`):
 ```
 This compiles `bridge/src/acgc_shm_client.c` into `godot/bin/acgc_shm_client_x64.dll` with static MinGW runtime linkage.
 
-### Step 2: Build the 32-Bit Headless Host (`acgc_host_x86.exe`)
+### Step 2: Build the 32-Bit Headless Host (`HaniwaHost.exe`)
 
 From PowerShell in the repository root:
 ```powershell
@@ -162,7 +162,7 @@ cmake -G Ninja ..
 ninja
 bash -c "find CMakeFiles/ac_pc.dir -name '*.obj' > objects.rsp && ar rcs libacgc_port.a @objects.rsp && rm -f objects.rsp"
 cd ../../..
-bash -c "gcc -m32 -O2 -static-libgcc -static-libstdc++ -Wl,--large-address-aware -Wl,--disable-dynamicbase -Wl,--allow-multiple-definition -Ibridge/include -Iport/pc/include -Iport/include bridge/src/acgc_host.c bridge/src/acgc_api_impl.c -Lport/pc/build32 -Wl,--start-group port/pc/build32/libacgc_port.a port/pc/build32/libglad.a -Wl,--end-group -lSDL2 -lopengl32 -lwinmm -limm32 -lversion -lsetupapi -lkernel32 -luser32 -lgdi32 -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 -lstdc++ -o acgc_host_x86.exe"
+bash -c "gcc -m32 -O2 -static-libgcc -static-libstdc++ -Wl,--large-address-aware -Wl,--disable-dynamicbase -Wl,--allow-multiple-definition -Ibridge/include -Iport/pc/include -Iport/include bridge/src/acgc_host.c bridge/src/acgc_api_impl.c -Lport/pc/build32 -Wl,--start-group port/pc/build32/libacgc_port.a port/pc/build32/libglad.a -Wl,--end-group -lSDL2 -lopengl32 -lwinmm -limm32 -lversion -lsetupapi -lkernel32 -luser32 -lgdi32 -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 -lstdc++ -o HaniwaHost.exe"
 ```
 
 ### Step 3: Run or Export the Launcher
@@ -171,7 +171,7 @@ bash -c "gcc -m32 -O2 -static-libgcc -static-libstdc++ -Wl,--large-address-aware
   ```powershell
   .\Godot_v4.7.2-stable_win64.exe --path godot
   ```
-- **Build standalone release package (`dist/ACGC_Launcher.exe`)**:
+- **Build standalone release package (`dist/HaniwaLauncher.exe`)**:
   ```powershell
   powershell -ExecutionPolicy Bypass -File tools/build_release_package.ps1
   ```

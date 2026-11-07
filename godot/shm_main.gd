@@ -1093,7 +1093,7 @@ func _update_stats_label() -> void:
 			err_detail = " (SHM Magic ungültig)"
 		elif err_code == 4000:
 			err_detail = " (SHM Version ungültig)"
-		stats_label.text = "ACGC Hybrid 64-bit | Verbinde mit Host (acgc_host_x86.exe)...%s" % err_detail
+		stats_label.text = "HaniwaBridge 64-bit | Connecting to Host (HaniwaHost.exe)...%s" % err_detail
 		return
 	var frame_ms: float = _frame_times.back() if not _frame_times.is_empty() else 0.0
 	var p50 := _percentile(_frame_times, 0.50)
@@ -1147,6 +1147,7 @@ func _exit_tree() -> void:
 	if shm_client and _opened:
 		shm_client.call("send_exit_signal")
 	if Engine.has_meta("acgc_host_pid"):
+		OS.execute("taskkill", PackedStringArray(["/IM", "HaniwaHost.exe", "/F"]))
 		OS.execute("taskkill", PackedStringArray(["/IM", "acgc_host_x86.exe", "/F"]))
 	if renderer:
 		renderer.cleanup()
@@ -1154,6 +1155,7 @@ func _exit_tree() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		if Engine.has_meta("acgc_host_pid"):
+			OS.execute("taskkill", PackedStringArray(["/IM", "HaniwaHost.exe", "/F"]))
 			OS.execute("taskkill", PackedStringArray(["/IM", "acgc_host_x86.exe", "/F"]))
 
 

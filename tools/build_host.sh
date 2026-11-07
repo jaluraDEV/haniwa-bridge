@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the standalone 32-bit headless host (Plan B producer).
-# Run inside the MSYS2 MINGW32 shell. Produces acgc_host_x86.exe in the repo root.
+# Run inside the MSYS2 MINGW32 shell. Produces HaniwaHost.exe in the repo root.
 # Requires the port to be built first (port/pc/build32/libacgc_port.a).
 set -e
 export PATH="/mingw32/bin:/usr/bin:${PATH}"
@@ -16,7 +16,7 @@ rm -f objects.rsp
 
 cd "${ROOT_DIR}"
 
-echo "=== Building acgc_host_x86.exe ==="
+echo "=== Building HaniwaHost.exe ==="
 gcc -m32 -O2 \
     -static-libgcc -static-libstdc++ \
     -Wl,--large-address-aware \
@@ -29,7 +29,7 @@ gcc -m32 -O2 \
     -Wl,--start-group "${BUILD_DIR}/libacgc_port.a" "${BUILD_DIR}/libglad.a" -Wl,--end-group \
     -lSDL2 -lopengl32 -lwinmm -limm32 -lversion -lsetupapi \
     -lkernel32 -luser32 -lgdi32 -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 -lstdc++ \
-    -o acgc_host_x86.exe
+    -o HaniwaHost.exe
 
 # Copy required runtime DLLs next to the host if absent.
 cp -f /mingw32/bin/SDL2.dll . 2>/dev/null || true
@@ -37,5 +37,5 @@ cp -f /mingw32/bin/libwinpthread-1.dll . 2>/dev/null || true
 cp -f /mingw32/bin/libstdc++-6.dll . 2>/dev/null || true
 cp -f /mingw32/bin/libgcc_s_dw2-1.dll . 2>/dev/null || true
 
-echo "=== Build finished: acgc_host_x86.exe ==="
-echo "Smoke test: ./acgc_host_x86.exe --test-shm --frames 60 --rom rom/animal_crossing.iso"
+echo "=== Build finished: HaniwaHost.exe ==="
+echo "Smoke test: ./HaniwaHost.exe --test-shm --frames 60 --rom rom/animal_crossing.iso"

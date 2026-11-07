@@ -1,7 +1,7 @@
 @echo off
 setlocal
-rem ACGC Hybrid (Plan B) — 32-bit headless host + 64-bit Godot renderer.
-rem Run from the project root. Requires acgc_host_x86.exe (tools/build_host.sh)
+rem HaniwaBridge Hybrid — 32-bit headless host + 64-bit Godot renderer.
+rem Run from the project root. Requires HaniwaHost.exe (tools/build_host.sh)
 rem and godot/bin/acgc_shm_client_x64.dll (tools/build_client_x64.sh) to be built.
 cd /d "%~dp0"
 
@@ -11,10 +11,14 @@ if /I "%~1"=="--quick-start" set "GODOT_PLAYTEST_ARGS=-- --quick-start"
 if defined GODOT_PLAYTEST_ARGS echo [Hybrid] Quick start: auto-confirm title/player greeting; Escape cancels.
 
 rem Terminate any stale host process that might still lock shared memory.
+taskkill /IM HaniwaHost.exe /F >nul 2>&1
 taskkill /IM acgc_host_x86.exe /F >nul 2>&1
 
-echo [Hybrid] Starting 32-bit headless host (acgc_host_x86.exe)...
-start "acgc_host_x86" /min cmd /c "acgc_host_x86.exe --rom rom/animal_crossing.iso > host.log 2>&1"
+set "HOST_EXE=HaniwaHost.exe"
+if not exist "HaniwaHost.exe" if exist "acgc_host_x86.exe" set "HOST_EXE=acgc_host_x86.exe"
+
+echo [Hybrid] Starting 32-bit headless host (%HOST_EXE%)...
+start "HaniwaHost" /min cmd /c "%HOST_EXE% --rom rom/animal_crossing.iso > host.log 2>&1"
 
 rem Give the host a moment to create the shared-memory mapping and boot.
 timeout /t 2 /nobreak >nul
@@ -28,6 +32,7 @@ echo [Hybrid] Godot exited; stopping the 32-bit host...
 rem Graceful path: main.gd calls send_exit_signal() on shutdown (sets the SHM
 rem exit flag). taskkill below is the reliable fallback for crashes/aborts.
 timeout /t 1 /nobreak >nul
+taskkill /IM HaniwaHost.exe /F >nul 2>&1
 taskkill /IM acgc_host_x86.exe /F >nul 2>&1
 
 echo [Hybrid] Done.

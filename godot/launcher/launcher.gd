@@ -58,7 +58,7 @@ func _resolve_root_dir() -> void:
 		candidates.append(proj_parent)
 		candidates.append(exe_dir.get_base_dir().simplify_path())
 	for cand in candidates:
-		if FileAccess.file_exists(cand.path_join("acgc_host_x86.exe")):
+		if FileAccess.file_exists(cand.path_join("HaniwaHost.exe")) or FileAccess.file_exists(cand.path_join("acgc_host_x86.exe")):
 			_root_dir = cand
 			return
 	_root_dir = proj_parent if OS.has_feature("editor") else exe_dir
@@ -305,12 +305,21 @@ func _on_extract_pressed() -> void:
 		return
 	_file_dialog.popup_centered(Vector2i(800, 560))
 
+func _get_host_exe_path() -> String:
+	var haniwa := _root_dir.path_join("HaniwaHost.exe")
+	if FileAccess.file_exists(haniwa):
+		return haniwa
+	var legacy := _root_dir.path_join("acgc_host_x86.exe")
+	if FileAccess.file_exists(legacy):
+		return legacy
+	return ""
+
 func _on_rom_file_selected(rom_path: String) -> void:
-	var host_exe := _root_dir.path_join("acgc_host_x86.exe")
-	if not FileAccess.file_exists(host_exe):
-		_status_badge.text = "● ERROR: acgc_host_x86.exe not found!"
+	var host_exe := _get_host_exe_path()
+	if host_exe.is_empty():
+		_status_badge.text = "● ERROR: HaniwaHost.exe not found!"
 		_status_badge.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
-		_status_detail.text = "Expected host binary at: " + host_exe
+		_status_detail.text = "Expected host binary at: " + _root_dir.path_join("HaniwaHost.exe")
 		return
 
 	var out_dir := _root_dir.path_join("orig/GAFE01_00")
@@ -387,11 +396,11 @@ func _on_fullscreen_toggled(enabled: bool) -> void:
 func _on_launch_pressed() -> void:
 	if not _is_extracted or _launching:
 		return
-	var host_exe := _root_dir.path_join("acgc_host_x86.exe")
-	if not FileAccess.file_exists(host_exe):
-		_status_badge.text = "● ERROR: acgc_host_x86.exe not found!"
+	var host_exe := _get_host_exe_path()
+	if host_exe.is_empty():
+		_status_badge.text = "● ERROR: HaniwaHost.exe not found!"
 		_status_badge.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
-		_status_detail.text = "Expected host binary at: " + host_exe
+		_status_detail.text = "Expected host binary at: " + _root_dir.path_join("HaniwaHost.exe")
 		return
 
 	_launching = true
@@ -402,7 +411,8 @@ func _on_launch_pressed() -> void:
 	# Ensure settings.ini is written before host boots
 	_on_fast_start_toggled(_chk_fast_start.button_pressed)
 
-	# Terminate any stale acgc_host_x86.exe instance
+	# Terminate any stale host instances
+	OS.execute("taskkill", PackedStringArray(["/IM", "HaniwaHost.exe", "/F"]))
 	OS.execute("taskkill", PackedStringArray(["/IM", "acgc_host_x86.exe", "/F"]))
 
 	var log_path := _root_dir.path_join("host.log")
@@ -412,7 +422,7 @@ func _on_launch_pressed() -> void:
 		_launching = false
 		_btn_launch.disabled = false
 		_btn_extract.disabled = false
-		_status_badge.text = "● ERROR: Failed to launch acgc_host_x86.exe"
+		_status_badge.text = "● ERROR: Failed to launch HaniwaHost.exe"
 		_status_badge.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
 		return
 

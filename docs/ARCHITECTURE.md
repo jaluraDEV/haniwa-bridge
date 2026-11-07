@@ -7,7 +7,7 @@ This document details the internal design of the **ACGC Godot Hybrid** engine.
 ## 1. System Overview
 
 ```
-┌───────────────────────────────── 32-Bit C Host (acgc_host_x86.exe) ─────────────────────────────────┐
+┌───────────────────────────────── 32-Bit C Host (HaniwaHost.exe) ─────────────────────────────────┐
 │  - Decompiled GameCube Logic (ac-decomp / GAFE01_00)                                                │
 │  - Integer 60.00 Hz Pacer (QueryPerformanceCounter)                                                  │
 │  - DVD Emulation & FST loader from orig/GAFE01_00/                                                   │
@@ -75,7 +75,7 @@ To prevent drift and buffer overflow:
 
 ## 5. One-Time ROM Extraction Engine
 
-The host binary (`acgc_host_x86.exe`) supports direct extraction via `--extract-rom <path> --out-dir <dir>`:
+The host binary (`HaniwaHost.exe`) supports direct extraction via `--extract-rom <path> --out-dir <dir>`:
 1. **Magic Verification**: Confirms GameCube disc magic `0xC2339F3D`.
 2. **Game ID & Revision Check**: Requires `GAFE01` (Animal Crossing USA) and Revision `0`.
 3. **Execution Extraction**:
